@@ -83,6 +83,7 @@ public abstract class E2ETestBase {
         page.getByLabel("Password").fill("secret-pass");
         button("Sign in").click();
         assertThat(page.locator("#tabs")).isVisible();
+        waitUntilSynced(); // tests start from loaded data; slow-load behaviour has its own tests
     }
 
     protected Locator button(String name) {

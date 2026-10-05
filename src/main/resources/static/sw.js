@@ -19,6 +19,7 @@ const ASSETS = [
   '/js/util.js',
   '/js/views/exercises.js',
   '/js/views/login.js',
+  '/js/views/workout.js',
 ];
 
 self.addEventListener('install', (event) => {
