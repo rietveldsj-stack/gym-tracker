@@ -73,6 +73,13 @@ public abstract class E2ETestBase {
 
     @AfterEach
     void closePage() {
+        // Let a sync that is still running finish, so its writes can't land in the next test's clean database.
+        try {
+            page.waitForFunction("() => document.body.dataset.sync !== 'syncing'", null,
+                    new Page.WaitForFunctionOptions().setTimeout(10_000));
+        } catch (RuntimeException ignored) {
+            // offline or stuck on purpose in this test: nothing will be written
+        }
         context.close();
         org.assertj.core.api.Assertions.assertThat(pageErrors).as("uncaught errors in the page").isEmpty();
     }

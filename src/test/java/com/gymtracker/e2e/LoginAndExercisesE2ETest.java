@@ -57,7 +57,7 @@ class LoginAndExercisesE2ETest extends E2ETestBase {
         context.setOffline(true);
         createExerciseViaUi("Bench press", "Chest");
         assertThat(page.locator("#syncbar")).hasText("1 change waiting to sync");
-        Assertions.assertThat(count("select count(*) from exercise")).isZero();
+        Assertions.assertThat(jdbc.queryForList("select name from exercise", String.class)).isEmpty();
 
         context.setOffline(false);
         waitUntilSynced();
