@@ -37,11 +37,12 @@ class LoginAndExercisesE2ETest extends E2ETestBase {
         signIn();
         createExerciseViaUi("Squat", "Quads");
         button("Squat").click();
+        button("Edit").click();
         page.getByLabel("Name").fill("Back squat");
         button("Save").click();
-        assertThat(button("Back squat")).isVisible();
+        assertThat(page.locator("h1")).hasText("Back squat");
 
-        button("Back squat").click();
+        button("Edit").click();
         button("Delete exercise").click();
         button("Delete").click();
         assertThat(page.getByText("No exercises yet")).isVisible();

@@ -8,11 +8,13 @@ import { renderLogin } from './views/login.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
 import * as history from './views/history.js';
+import * as stats from './views/stats.js';
 
 const TABS = [
   { id: 'workout', label: 'Workout', icon: '🏋️', view: workout },
   { id: 'exercises', label: 'Exercises', icon: '📋', view: exercises },
   { id: 'history', label: 'History', icon: '🗓️', view: history },
+  { id: 'stats', label: 'Stats', icon: '📈', view: stats },
 ];
 
 const viewEl = document.getElementById('view');

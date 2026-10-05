@@ -10,6 +10,7 @@ const ASSETS = [
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
   '/js/app.js',
+  '/js/charts.js',
   '/js/api.js',
   '/js/format.js',
   '/js/prefs.js',
@@ -25,6 +26,8 @@ const ASSETS = [
   '/js/views/history.js',
   '/js/views/login.js',
   '/js/views/settings.js',
+  '/js/views/stats.js',
+  '/vendor/chart.umd.min.js',
   '/js/views/workout.js',
 ];
 

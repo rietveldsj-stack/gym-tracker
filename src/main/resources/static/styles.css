@@ -257,15 +257,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .step-value input {
   width: 100%;
   max-width: 150px;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: var(--text-primary);
   font-size: 40px;
   font-weight: 700;
-  text-align: center;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.step-value span { color: var(--text-secondary); }
+.step-value span { color: var(--text-secondary); flex: 1; }
 .stepper.compact { grid-template-columns: 44px 72px 44px; }
 .stepper.compact .step { min-height: 44px; font-size: 22px; }
 output { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }

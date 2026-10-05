@@ -1,9 +1,20 @@
 import * as store from '../store.js';
+import { request } from '../api.js';
+import { navigate } from '../router.js';
 import { openSheet, confirmDialog, toast } from '../ui.js';
 import { esc, uuid } from '../util.js';
-import { MUSCLE_GROUPS, muscleLabel } from '../format.js';
+import { MUSCLE_GROUPS, muscleLabel, formatSet, formatWeight, formatDate } from '../format.js';
+import { lineChart } from '../charts.js';
 
-export function render(container) {
+let fetchedFor = null;
+let chartMode = 'weight';
+
+export function render(container, route = {}) {
+  if (route.exerciseId) {
+    renderDetail(container, route.exerciseId);
+    return;
+  }
+  fetchedFor = null;
   const { exercises } = store.view();
   const groups = MUSCLE_GROUPS
     .map((group) => ({ group, items: exercises.filter((e) => e.muscleGroup === group) }))
@@ -22,7 +33,7 @@ export function render(container) {
     </section>`;
   container.querySelector('[data-action="add"]').addEventListener('click', () => openExerciseForm());
   container.querySelectorAll('[data-id]').forEach((button) => button.addEventListener('click', () => {
-    openExerciseForm(exercises.find((e) => e.id === button.dataset.id));
+    navigate({ tab: 'exercises', exerciseId: button.dataset.id });
   }));
 }
 
@@ -82,4 +93,81 @@ export function openExerciseForm(exercise = null, { onSaved, onDeleted } = {}) {
     toast('Exercise deleted');
     onDeleted?.();
   });
+}
+
+function emptyChartMessage(stats, records) {
+  if (!stats) return navigator.onLine ? 'Loading…' : 'Not available offline.';
+  return records.repRecords.length ? 'Only bodyweight sets so far' : 'No work sets yet';
+}
+
+function renderDetail(container, id) {
+  const exercise = store.view().exercises.find((e) => e.id === id);
+  if (!exercise) {
+    navigate({ tab: 'exercises' });
+    return;
+  }
+  const stats = store.view().exerciseStats[id];
+  const records = stats?.records ?? exercise.records ?? { heaviest: null, repRecords: [] };
+  const points = stats?.sessions ?? [];
+  const { heaviest } = records;
+  container.innerHTML = `
+    <section class="screen">
+      <header class="topbar">
+        <button class="btn ghost back" data-action="back">‹ Exercises</button>
+        <button class="btn secondary small" data-action="edit">Edit</button>
+      </header>
+      <h1>${esc(exercise.name)}</h1>
+      <p class="muted">${muscleLabel(exercise.muscleGroup)}</p>
+      <div class="card">
+        <h2>Heaviest weight</h2>
+        <p class="big-number" id="heaviest">${heaviest ? formatSet(heaviest.weightKg, heaviest.reps) : '—'}</p>
+        ${heaviest ? `<p class="muted">${formatDate(heaviest.date, { weekday: false })}</p>` : ''}
+      </div>
+      <div class="card">
+        <h2>Progress</h2>
+        ${points.length ? `
+          <div class="segmented" role="radiogroup" aria-label="Chart">
+            <button type="button" role="radio" data-mode="weight" aria-checked="${chartMode === 'weight'}">Heaviest weight</button>
+            <button type="button" role="radio" data-mode="e1rm" aria-checked="${chartMode === 'e1rm'}">Estimated 1RM</button>
+          </div>
+          <div class="chart-wrap"><canvas id="progress-chart" role="img" aria-label="Progress per workout"></canvas></div>`
+          : `<p class="empty">${emptyChartMessage(stats, records)}</p>`}
+      </div>
+      <div class="card">
+        <h2>Rep records</h2>
+        ${records.repRecords.length ? `
+          <table class="records">
+            <thead><tr><th>Weight</th><th>Most reps</th><th>Date</th></tr></thead>
+            <tbody>${records.repRecords.map((r) => `
+              <tr>
+                <td>${Number(r.weightKg) === 0 ? 'Bodyweight' : formatWeight(r.weightKg)}</td>
+                <td>${r.reps}</td>
+                <td>${formatDate(r.date, { weekday: false })}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>` : '<p class="empty">No work sets yet</p>'}
+      </div>
+    </section>`;
+  container.querySelector('[data-action="back"]').addEventListener('click', () => navigate({ tab: 'exercises' }));
+  container.querySelector('[data-action="edit"]').addEventListener('click', () => {
+    openExerciseForm(exercise, { onDeleted: () => navigate({ tab: 'exercises' }) });
+  });
+  container.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
+    chartMode = button.dataset.mode;
+    renderDetail(container, id);
+  }));
+  if (points.length) {
+    lineChart(
+      container.querySelector('#progress-chart'),
+      points.map((p) => formatDate(p.date, { weekday: false })),
+      points.map((p) => Number(chartMode === 'weight' ? p.maxWeightKg : p.est1rmKg)),
+      'kg',
+    );
+  }
+  if (fetchedFor !== id) {
+    fetchedFor = id;
+    request('GET', `/api/exercises/${id}/stats`).then((result) => {
+      if (result.kind === 'ok') store.cacheExerciseStats(id, result.data);
+    });
+  }
 }
