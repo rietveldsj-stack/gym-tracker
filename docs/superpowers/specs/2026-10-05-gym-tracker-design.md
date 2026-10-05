@@ -13,12 +13,16 @@ one-handed, between sets. She saves the web app to her home screen from Safari.
 - Start a workout session dated today and log sets (exercise, weight, reps, warmup/work).
 - End the session and see how long it took.
 - Look back at past sessions.
+- See her progress per exercise in charts, and weekly training stats.
+- Get "New PR!" feedback when she beats a personal record.
+- Use a rest timer between sets that can alert her on the lock screen.
 
 **Success criteria:**
 - Logging a set takes at most a few taps, and the weight/reps are prefilled.
 - Nothing she logs is lost, even with poor or no signal in the gym.
 - It feels like an app on her home screen: full-screen, own icon, opens offline.
 - She sees the workout duration when she ends a session, and a live timer while it is running.
+- Saving a set starts the rest timer automatically, and the lock-screen alert arrives when the rest is over.
 
 **Constraints:**
 - Backend is Java / Spring Boot.
@@ -29,13 +33,14 @@ one-handed, between sets. She saves the web app to her home screen from Safari.
 **Out of scope (YAGNI):**
 - Multiple users or sign-up, sign-out, and password reset.
 - Editing past (ended) sessions.
-- Charts, progression stats, personal records, rest timers.
+- Charts other than the three in §5 (no body weight, total volume, etc.).
+- Different rest times per exercise.
 - Restoring archived exercises.
 - Syncing across several devices at the same time.
 
 ## 2. Data model
 
-There is no user table. The single account is configured with environment variables (§5).
+There is no user table. The single account is configured with environment variables (§6).
 
 ### Exercise
 | Field | Type | Rules |
@@ -84,6 +89,16 @@ There is no user table. The single account is configured with environment variab
 For an exercise, "last time" is the most recent `WORK` set of that exercise (by `loggedAt`) in an
 **ended** session. Warmup sets and the current open session are ignored. If there is none, nothing is shown.
 
+### Push subscription
+| Field | Type | Rules |
+|---|---|---|
+| `endpoint` | text | Primary key. The push service URL for one device |
+| `p256dh`, `auth` | text | The device's encryption keys from the browser |
+| `createdAt` | timestamp | Set by the server |
+
+Records and chart data are always **calculated** from sets and never stored (§5). Rest-timer settings
+live only on the phone (`localStorage`).
+
 ## 3. Architecture
 
 ### Overall structure
@@ -98,6 +113,8 @@ Base package `com.gymtracker`:
 - **`exercise`:** `Exercise` entity, repository, service, controller and DTOs.
 - **`workout`:** `WorkoutSession` and `WorkoutSet` entities, repositories, a `WorkoutService` and controllers for sessions and sets.
 - **`security`:** Spring Security configuration and the setup for the single in-memory user.
+- **`stats`:** calculates personal records, per-exercise chart data and weekly stats. Read-only queries.
+- **`push`:** `PushSubscription` entity and repository, a `PushSender` (wraps `nl.martijndwars:web-push`), and a `RestTimerService` holding the one scheduled alert.
 - **`common`:** a global `@RestControllerAdvice` error handler and shared error DTOs.
 
 ### API
@@ -106,7 +123,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 
 | Method & path | Body | Result |
 |---|---|---|
-| `GET /api/exercises` | — | Non-archived exercises, each with a `lastTime` field: `{weightKg, reps, date}` or null |
+| `GET /api/exercises` | — | Non-archived exercises, each with a `lastTime` field (`{weightKg, reps, date}` or null) and a `records` field (§5) |
 | `PUT /api/exercises/{id}` | `{name, muscleGroup}` | Creates or updates the exercise. `200` with the exercise |
 | `DELETE /api/exercises/{id}` | — | Archives the exercise. `204`. Archiving an already archived exercise is fine |
 | `GET /api/sessions/active` | — | `200` with the open session and its sets (each set includes the exercise name), or `204` if none is open |
@@ -117,6 +134,12 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 | `DELETE /api/sessions/{id}` | — | Discards the session and its sets. `204`. Discarding a session that no longer exists is fine |
 | `PUT /api/sets/{id}` | `{sessionId, exerciseId, weightKg, reps, type, loggedAt}` | Creates or updates the set. `200` |
 | `DELETE /api/sets/{id}` | — | `204`. Deleting a set that no longer exists is fine |
+| `GET /api/exercises/{id}/stats` | — | `{records, sessions: [{date, maxWeightKg, est1rmKg}]}` for the exercise detail screen (§5) |
+| `GET /api/stats/weekly?weeks=12` | — | `[{weekStart, workouts, workSetsByMuscle: {QUADS: 12, …}}]`, oldest first, including weeks with zero. `weeks` is 1–52, default 12 |
+| `GET /api/push/public-key` | — | `{publicKey}`: the VAPID public key the phone needs to register for notifications |
+| `PUT /api/push/subscription` | `{endpoint, keys: {p256dh, auth}}` | Saves or updates the device's registration. `200` |
+| `PUT /api/rest-timer` | `{endsAt}` | Schedules the lock-screen alert, replacing any earlier one. `endsAt` must be in the future and at most 1 hour away, otherwise `400`. `204` |
+| `DELETE /api/rest-timer` | — | Cancels the scheduled alert. `204`, also if none was scheduled |
 
 **Errors:** `{ "message": "..." }` with these status codes:
 - `400` for validation errors;
@@ -134,7 +157,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 ### Modules (`static/js/`)
 - **`api.js`:** a `fetch` wrapper. It attaches the CSRF token from the `XSRF-TOKEN` cookie and maps responses to *ok*, *network error*, *rejected (4xx)* or *unauthorized (401)*.
 - **`store.js`:**
-  - Holds the last **server snapshot** (exercises, open session, history summaries) and the **outbox** of pending operations. Both are saved in `localStorage`.
+  - Holds the last **server snapshot** (exercises with records, open session, history summaries, weekly stats, and per-exercise stats for each exercise she has viewed) and the **outbox** of pending operations. Both are saved in `localStorage`.
   - Exposes `view()`, which is the snapshot with the pending operations applied on top. All screens render from `view()`.
 - **`sync.js`:**
   - Sends the outbox in order, one operation at a time.
@@ -144,12 +167,17 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
   - **Rejected (4xx except 401):** remove the operation, show a message, and fetch a fresh snapshot.
   - **401:** keep the outbox and show the login screen. Sending resumes after login.
 - **`ui.js`:** shared building blocks: bottom sheet, confirm dialog, toast, and a stepper for the number fields.
-- **`views/`:** `login.js`, `workout.js`, `exercises.js`, `history.js`.
+- **`views/`:** `login.js`, `workout.js`, `exercises.js` (list, form and detail screen), `history.js`, `stats.js`, `settings.js`.
+- **`records.js`:** PR detection for the open session (§5). Pure functions, no screen code.
+- **`rest.js`:** the rest timer: countdown, ±15 s, skip, beep, and calling `/api/rest-timer` when alerts are on.
+- **`push.js`:** asks for notification permission and registers the device for push.
+- **`charts.js`:** draws the line and bar charts with Chart.js, which is stored in `static/vendor/chart.umd.min.js` (no CDN, so it works offline).
 - **`app.js`:** starts the app, handles the tab bar and screen routing, and registers the service worker.
 - **`sw.js` (service worker):**
   - Caches the app's own files under a versioned cache name; changing the version updates the app.
   - Serves those files from the cache first, so the app opens offline.
   - `/api/**` always goes to the network and is never cached.
+  - Handles `push` events by showing the notification, and `notificationclick` by opening or focusing the app.
 
 ### Offline behaviour
 Every action works like this:
@@ -164,7 +192,7 @@ all work without signal.
 **Sync indicator:** a small status line shows "N changes waiting to sync" while the outbox is not empty.
 
 ### Screens
-Bottom tab bar: **Workout · Exercises · History**.
+Bottom tab bar: **Workout · Exercises · History · Stats**.
 
 **Login:**
 - Username, password and **Sign in**.
@@ -173,10 +201,11 @@ Bottom tab bar: **Workout · Exercises · History**.
 
 **Workout, no open session:**
 - Today's date and a large **Start session** button.
+- A gear icon in the header opens **Settings**.
 - A card with the last workout: date, duration and set count.
 
 **Workout, open session:**
-- **Header:** the date and a live timer (`H:MM:SS`, calculated from `startedAt`, so it survives the app closing). Also an **End** button and a `⋯` menu with *Discard session*, which asks for confirmation first.
+- **Header:** the date and a live timer (`H:MM:SS`, calculated from `startedAt`, so it survives the app closing). Also an **End** button and a `⋯` menu with *Settings* and *Discard session*. Discard asks for confirmation first.
 - **Set list:** sets grouped by exercise, in order of the exercise's first set. Each row shows `40 kg × 10`, and warmup rows carry a grey "Warmup" tag. Each group has a **+ Set** button.
 - **+ Add exercise** opens the exercise picker:
   - a search field;
@@ -187,30 +216,100 @@ Bottom tab bar: **Workout · Exercises · History**.
   - **Reps:** a large value with −/+ buttons (±1), limited to 1–100.
   - **Warmup / Work** toggle, default **Work**.
   - The line "Last time: 40 kg × 10" when available.
-  - **Save.**
+  - **Save.** Saving starts the rest timer if auto-start is on. If the set is a PR, a "🏆 New PR!" toast appears.
   - **Prefill:** the most recent set of that exercise in this session if there is one; otherwise last time; otherwise 0 kg × 10.
 - **Tapping an existing set** opens the same sheet in edit mode with a **Delete** button.
+- **PR sets** get a 🏆 mark in the set list.
+- **Rest bar** (§5): fixed above the tab bar while a rest is running. If auto-start is off, a **Start rest** button sits there instead.
 - **End:**
   1. Confirm "End workout?". If no sets are logged, the dialog says instead: "No sets logged. This workout won't be saved."
-  2. With sets: a summary screen shows the duration in large text, the date, the number of exercises and the number of work sets.
+  2. With sets: a summary screen shows the duration in large text, the date, the number of exercises, the number of work sets, and a list of the PRs set in this workout (if any).
   3. Without sets: no summary. The app goes straight back to the start screen and shows the toast "Empty workout discarded".
   4. **Done** goes back to the "no open session" screen.
 
 **Exercises:**
 - The list grouped by muscle group, with a **+** button.
 - **Form:** name field and 10 muscle-group buttons, one of which must be selected.
-- Tapping an exercise opens the form to edit it, with a **Delete** button. Delete asks for confirmation, then archives.
+- Tapping an exercise opens its **detail screen** (§5). An **Edit** button there opens the form, which has a **Delete** button. Delete asks for confirmation, then archives.
 - A duplicate name shows the message "You already have an exercise called '…'". The phone checks this immediately, and the server's `409` is the backstop.
 
 **History:**
 - Ended sessions, newest first: date, duration, set count and muscle groups (for example "Quads · Glutes").
 - Tapping a session opens a view-only detail screen with its sets grouped by exercise.
 
-## 5. Security
+**Stats:** described in §5.
+
+**Settings** (sheet):
+- **Rest time:** −/+ in 15 s steps, 15 s to 10 min, default 90 s.
+- **Auto-start rest after each set:** on/off, default on.
+- **Lock-screen alerts:** an **Enable** button (§5). It shows "On" once enabled, or an explanation if alerts aren't possible on this device.
+
+## 5. Progress, records and rest timer
+
+### Personal records
+Only **work** sets from **ended** sessions count, unless stated otherwise.
+
+An exercise's `records` (included in `GET /api/exercises` and `GET /api/exercises/{id}/stats`):
+- **`heaviest`:** `{weightKg, reps, date}`, the work set with the highest weight above 0. A tie on weight goes to more reps, then the earliest date. Null if there is none.
+- **`repRecords`:** `[{weightKg, reps, date}]`, one entry per weight she has lifted, including 0 kg (bodyweight). Each holds the most reps at that weight and the earliest date it was reached. Sorted by weight, highest first.
+
+**PRs during a workout** (`records.js`, runs on the phone so it works offline):
+- Work sets in the open session are checked in `loggedAt` order. "Before" means the stored records plus the earlier work sets of this session.
+- **Heaviest-weight PR:** the weight is above 0, the exercise has at least one earlier work set, and the weight is higher than every earlier weight.
+- **Rep PR:** she has done this exact weight before, and the reps are higher than the earlier best at that weight.
+- **Never a PR:** the first set ever of an exercise, the first set ever at a particular weight (unless it's a heaviest-weight PR), and warmup sets.
+- Flags are recalculated whenever the session's sets change, so editing or deleting a set updates the 🏆 marks. The toast only appears when saving a new set or an edited one.
+
+### Exercise detail screen
+- **Header:** name and muscle group, plus an **Edit** button.
+- **Records:** the heaviest-weight card ("60 kg × 5 · 12 Sep"), and the rep-records table (`40 kg → 12 reps · 3 Sep`).
+- **Progress chart:** a line chart with one point per ended session that has work sets above 0 kg, in date order, over all time. A toggle switches between:
+  - **Heaviest weight:** `maxWeightKg`, the heaviest work set of that session.
+  - **Estimated 1RM:** `est1rmKg`, the highest `weight × (1 + reps/30)` over that session's work sets (Epley formula). A 1-rep set counts as its own weight. Rounded to 0.5 kg.
+- **Empty states:** "No work sets yet" when there's no data. Exercises done only at 0 kg (bodyweight) show the rep records but no chart.
+- **Offline:** the last fetched data is shown. The screen is not part of the outbox.
+
+### Stats tab
+- **Workouts per week:** a bar chart of the last 12 weeks, Monday to Sunday. Weeks with zero workouts are shown. Sessions count by their `date`.
+- **Work sets per muscle group:** horizontal bars for one week, with ‹ › arrows to move between the 12 weeks. Default is this week. Muscle groups with zero sets in that week are hidden. If the whole week is empty, "No workouts this week".
+- **Offline:** the last fetched data is shown, with an "as of" date.
+
+### Rest timer
+**In-app (`rest.js`):**
+- **Start:** saving any set (warmup or work) starts or restarts the rest if auto-start is on. Otherwise she taps **Start rest**.
+- **Duration:** taken from Settings (default 90 s).
+- **State:** `endsAt` is saved in `localStorage`, so the countdown survives the app being closed and reopened.
+- **Rest bar:** shows the time left as `M:SS` with a progress bar, **−15 s**, **+15 s** and **Skip**. ±15 s shifts `endsAt`.
+- **Reaching zero:**
+  - a short beep through the Web Audio API (the audio is unlocked by her taps in the app);
+  - the bar shows "Rest over" for 5 s, then hides.
+- **Ending or discarding the session** stops the rest.
+
+**Lock-screen alert:**
+- **Enabling** (from Settings; needs her tap):
+  1. Check that the app runs from the home screen (`navigator.standalone`) and that `PushManager` exists. If not, show "Add the app to your Home Screen first (iOS 16.4 or later)".
+  2. `Notification.requestPermission()`.
+  3. `GET /api/push/public-key`, then `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})`.
+  4. `PUT /api/push/subscription`, and remember `alertsEnabled` on the phone.
+- **Sending the timer to the server:**
+  - When alerts are on, starting or adjusting a rest sends `PUT /api/rest-timer {endsAt}`. Skip, ending the session and discarding the session send `DELETE /api/rest-timer`.
+  - These calls **don't go through the outbox**: a late alert is useless. If they fail, the in-app countdown still works and nothing is retried.
+- **Server (`RestTimerService`):**
+  - Holds one `ScheduledFuture` in memory. A new `PUT` cancels and replaces it.
+  - At `endsAt`, it sends the notification to every stored subscription through `PushSender`. The payload is `{"title": "Rest's over", "body": "Time for your next set 💪"}`.
+  - A `404` or `410` from the push service deletes that subscription.
+  - A pending alert is lost if the server restarts. This is accepted.
+- **Service worker:** `push` shows the notification. `notificationclick` focuses the open app or opens `/`.
+- **Known limits:**
+  - iPhone shows the notification even when the app is open.
+  - Delivery timing depends on Apple, usually within a few seconds.
+  - With no signal at rest start there is no alert, only the in-app countdown.
+
+## 6. Security
 - **Spring Security, single user:**
   - `APP_USERNAME` and `APP_PASSWORD` come from environment variables.
   - The password is BCrypt-hashed in memory when the app starts and never stored in plain text.
-  - The app refuses to start if either variable is missing.
+  - The app refuses to start if either variable is missing, or if any `VAPID_*` variable is missing.
 - **Login:** the app sends a form-login POST to `/login`. It returns `200` on success and `401` on failure, never a redirect.
 - **Remember me:**
   - Uses Spring's database-backed remember-me tokens (`PersistentTokenBasedRememberMeServices` with a `persistent_logins` table created by a Flyway migration), keyed with `REMEMBER_ME_KEY`.
@@ -225,11 +324,11 @@ Bottom tab bar: **Workout · Exercises · History**.
   - When not signed in, `/api/**` returns `401` (no redirect).
 - **Password strength:** the Railway setup guide asks for a long random password, because the URL and the repo are public.
 
-## 6. Error handling
+## 7. Error handling
 - **Backend:** one `@RestControllerAdvice` turns validation errors, not-found, conflict and unexpected errors into `{message}`. Unexpected errors are logged and return a generic `500` message.
 - **Frontend:** errors appear as toasts. Validation in forms is checked on the phone before anything is saved, with the server as the backstop.
 
-## 7. Testing
+## 8. Testing
 **Backend** (JUnit 5, `@SpringBootTest`, MockMvc, PostgreSQL via Testcontainers):
 - **Exercises:** create, rename, archive; duplicate name `409` (ignoring upper/lower case, among non-archived only); validation `400`.
 - **Sessions:**
@@ -242,19 +341,37 @@ Bottom tab bar: **Workout · Exercises · History**.
   - history order and the calculated fields.
 - **Sets:** create, re-send, edit, delete; limits on weight and reps; multiples of 0.25; `409` for an ended session; a new set on an archived exercise is rejected.
 - **Last time:** uses only work sets, only ended sessions, and the most recent one.
+- **Records and charts:**
+  - `heaviest` ignores warmups, the open session and 0 kg, and breaks ties correctly;
+  - `repRecords` includes 0 kg;
+  - per-session `maxWeightKg` and `est1rmKg` (Epley, 1-rep sets, rounding).
+- **Weekly stats:** Monday week boundaries, zero weeks included, only work sets in muscle counts, only ended sessions, and the `weeks` limits.
+- **Push and rest timer** (`PushSender` replaced by a fake, and a controllable clock):
+  - the alert is sent at `endsAt`;
+  - a new `PUT` replaces the old timer;
+  - `DELETE` cancels it;
+  - an `endsAt` in the past or more than 1 h away gives `400`;
+  - a `410` from the push service removes that subscription;
+  - saving the subscription twice keeps one row.
 - **Security:** `401` when not signed in; a write without the CSRF token is rejected; login → remember-me cookie → a fresh request without a session is authenticated.
 
 **End-to-end** (Playwright for Java, WebKit, iPhone viewport, app on a random port with Testcontainers Postgres):
 1. **Main flow:** login → create exercise → start session → log warmup + work set → end → duration shown → session appears in History.
 2. **Offline:** go offline mid-session → log 3 sets → the screen shows them and "3 changes waiting" → go online → the database has exactly 3 sets.
 3. **Resume:** reload mid-session → the open session, timer and sets are restored. The next session's set sheet shows "Last time".
+4. **PRs:** after a session with 40 kg × 10, a new session's 40 kg × 12 work set shows the "New PR!" toast and 🏆, a 30 kg × 5 set doesn't, and the summary lists the PR.
+5. **Rest timer:** using Playwright's simulated clock, saving a set shows the rest bar at 1:30. +15 s gives 1:45. After the time passes the bar shows "Rest over". Skip hides it.
+6. **Charts:** after two ended sessions, the exercise detail chart and both Stats charts draw (a canvas is present and there's no error in the console).
+
+**JavaScript unit tests** for `records.js`: run in the same WebKit browser through a small test page (`/test/records.html`, only included in tests), covering the PR rules above.
 
 **Manual on her iPhone:**
 - Add to Home Screen.
 - Full-screen launch.
 - Log a set in airplane mode, then turn signal back on and check it syncs.
+- Enable lock-screen alerts, save a set, lock the phone, and check the alert arrives after about 90 s.
 
-## 8. Deployment
+## 9. Deployment
 - **Repo:** public GitHub repo `rietveldsj-stack/gym-tracker`.
 - **CI:** a GitHub Actions workflow runs `./mvnw verify` (unit, integration and E2E tests) on every push and pull request.
 - **Dockerfile:**
@@ -266,7 +383,8 @@ Bottom tab bar: **Workout · Exercises · History**.
     - `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, referenced from the Postgres service;
     - `APP_USERNAME`;
     - `APP_PASSWORD`;
-    - `REMEMBER_ME_KEY`.
+    - `REMEMBER_ME_KEY`;
+    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (`mailto:` address), generated during setup.
   - Health check on `/actuator/health`.
   - A generated public domain.
 - **Railway guide:** a step-by-step `docs/railway-setup.md`, written during implementation and walked through with the owner.
