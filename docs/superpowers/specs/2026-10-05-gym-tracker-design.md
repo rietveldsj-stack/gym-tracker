@@ -62,7 +62,7 @@ There is no user table. The single account is configured with environment variab
 **Rules:**
 - At most one open session exists at any time.
 - Duration is always calculated as `endedAt − startedAt` and never stored.
-- A session may be ended with zero sets.
+- Ending a session that has zero sets deletes it immediately, exactly like discarding it. An empty session never appears in history.
 - Discarding a session deletes it and all of its sets.
 
 ### Set
@@ -113,7 +113,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 | `GET /api/sessions` | — | Ended sessions, newest first: `{id, date, startedAt, endedAt, durationSeconds, setCount, muscleGroups[]}` |
 | `GET /api/sessions/{id}` | — | The session with its sets (each set includes the exercise name and muscle group) |
 | `PUT /api/sessions/{id}` | `{date, startedAt}` | Starts the session. Re-sending it for the same id returns `200`. `409` if a **different** session is open |
-| `POST /api/sessions/{id}/end` | `{endedAt}` | Ends the session. If it is already ended, `200` and the original `endedAt` is kept |
+| `POST /api/sessions/{id}/end` | `{endedAt}` | Ends the session: `200` with `{discarded: false, session}`. If it has zero sets, it is deleted instead: `200` with `{discarded: true}`. If it is already ended, `200` and the original `endedAt` is kept. If it no longer exists (already discarded), `200` with `{discarded: true}` |
 | `DELETE /api/sessions/{id}` | — | Discards the session and its sets. `204`. Discarding a session that no longer exists is fine |
 | `PUT /api/sets/{id}` | `{sessionId, exerciseId, weightKg, reps, type, loggedAt}` | Creates or updates the set. `200` |
 | `DELETE /api/sets/{id}` | — | `204`. Deleting a set that no longer exists is fine |
@@ -191,9 +191,10 @@ Bottom tab bar: **Workout · Exercises · History**.
   - **Prefill:** the most recent set of that exercise in this session if there is one; otherwise last time; otherwise 0 kg × 10.
 - **Tapping an existing set** opens the same sheet in edit mode with a **Delete** button.
 - **End:**
-  1. Confirm "End workout?".
-  2. A summary screen shows the duration in large text, the date, the number of exercises and the number of work sets.
-  3. **Done** goes back to the "no open session" screen.
+  1. Confirm "End workout?". If no sets are logged, the dialog says instead: "No sets logged. This workout won't be saved."
+  2. With sets: a summary screen shows the duration in large text, the date, the number of exercises and the number of work sets.
+  3. Without sets: no summary. The app goes straight back to the start screen and shows the toast "Empty workout discarded".
+  4. **Done** goes back to the "no open session" screen.
 
 **Exercises:**
 - The list grouped by muscle group, with a **+** button.
@@ -235,6 +236,7 @@ Bottom tab bar: **Workout · Exercises · History**.
   - start, and re-sending start for the same id;
   - `409` when a different session is open;
   - ending twice keeps the original `endedAt`;
+  - ending a session with zero sets deletes it and it does not appear in history;
   - `endedAt < startedAt` gives `400`;
   - discard removes its sets;
   - history order and the calculated fields.
