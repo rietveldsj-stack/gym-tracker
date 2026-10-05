@@ -5,9 +5,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -73,5 +75,41 @@ public abstract class IntegrationTestBase {
 
     protected ResultActions apiDelete(String url) throws Exception {
         return mvc.perform(delete(url).with(signedIn()));
+    }
+
+    protected UUID createExercise(String name, String muscleGroup) throws Exception {
+        UUID id = UUID.randomUUID();
+        apiPut("/api/exercises/" + id, """
+                {"name": "%s", "muscleGroup": "%s"}""".formatted(name, muscleGroup)).andExpect(status().isOk());
+        return id;
+    }
+
+    /** Starts a session whose date is the date part of {@code startedAt} (an ISO instant). */
+    protected UUID startSession(String startedAt) throws Exception {
+        UUID id = UUID.randomUUID();
+        apiPut("/api/sessions/" + id, """
+                {"date": "%s", "startedAt": "%s"}""".formatted(startedAt.substring(0, 10), startedAt))
+                .andExpect(status().isOk());
+        return id;
+    }
+
+    protected UUID logSet(UUID sessionId, UUID exerciseId, String weightKg, int reps, String type, String loggedAt)
+            throws Exception {
+        UUID id = UUID.randomUUID();
+        apiPut("/api/sets/" + id, setJson(sessionId, exerciseId, weightKg, reps, type, loggedAt))
+                .andExpect(status().isOk());
+        return id;
+    }
+
+    protected static String setJson(UUID sessionId, UUID exerciseId, String weightKg, int reps, String type,
+                                    String loggedAt) {
+        return """
+                {"sessionId": "%s", "exerciseId": "%s", "weightKg": %s, "reps": %d, "type": "%s", "loggedAt": "%s"}"""
+                .formatted(sessionId, exerciseId, weightKg, reps, type, loggedAt);
+    }
+
+    protected void endSession(UUID sessionId, String endedAt) throws Exception {
+        apiPost("/api/sessions/" + sessionId + "/end", """
+                {"endedAt": "%s"}""".formatted(endedAt)).andExpect(status().isOk());
     }
 }
