@@ -12,6 +12,9 @@ const ASSETS = [
   '/js/app.js',
   '/js/api.js',
   '/js/format.js',
+  '/js/prefs.js',
+  '/js/push.js',
+  '/js/rest.js',
   '/js/records.js',
   '/js/router.js',
   '/js/store.js',
@@ -21,6 +24,7 @@ const ASSETS = [
   '/js/views/exercises.js',
   '/js/views/history.js',
   '/js/views/login.js',
+  '/js/views/settings.js',
   '/js/views/workout.js',
 ];
 
@@ -54,5 +58,22 @@ self.addEventListener('fetch', (event) => {
       return cached;
     }
     return network;
+  }));
+});
+
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: "Rest's over", body: 'Time for your next set 💪' };
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: '/icons/icon-192.png',
+    tag: 'rest-timer',
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    if (windows.length) return windows[0].focus();
+    return self.clients.openWindow('/');
   }));
 });

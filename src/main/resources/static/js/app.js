@@ -3,6 +3,7 @@ import * as store from './store.js';
 import * as sync from './sync.js';
 import { getRoute, navigate, setRenderer } from './router.js';
 import { toast } from './ui.js';
+import { initRest, setSessionOpen } from './rest.js';
 import { renderLogin } from './views/login.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
@@ -31,6 +32,7 @@ function render() {
   const pending = store.pending();
   syncEl.hidden = pending === 0;
   syncEl.textContent = `${pending} change${pending === 1 ? '' : 's'} waiting to sync`;
+  setSessionOpen(Boolean(store.view().activeSession));
   current.view.render(viewEl, route);
 }
 
@@ -38,6 +40,7 @@ function showLogin() {
   signedIn = false;
   tabsEl.hidden = true;
   syncEl.hidden = true;
+  setSessionOpen(false);
   renderLogin(viewEl, { onSuccess: showApp });
 }
 
@@ -79,6 +82,7 @@ tabsEl.addEventListener('click', (event) => {
 async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   setRenderer(render);
+  initRest();
   navigate({ tab: TABS[0].id });
   sync.onUnauthorized(showLogin);
   sync.onRejected((message) => toast(message));

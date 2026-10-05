@@ -7,12 +7,14 @@ import {
 } from '../format.js';
 import { openExerciseForm } from './exercises.js';
 import { prFlags, isPr, recordsByExercise } from '../records.js';
+import { onSetSaved } from '../rest.js';
+import { openSettings } from './settings.js';
 
 let timer = null;
 const byTime = (a, b) => Date.parse(a.loggedAt) - Date.parse(b.loggedAt);
 
 export function render(container, route) {
-  clearInterval(timer);
+  clearTimeout(timer);
   if (route.summary) {
     renderSummary(container, route.summary);
     return;
@@ -26,7 +28,10 @@ function renderStart(container) {
   const last = store.view().history[0];
   container.innerHTML = `
     <section class="screen">
-      <header class="topbar"><h1>Workout</h1></header>
+      <header class="topbar">
+        <h1>Workout</h1>
+        <button class="btn icon ghost" data-action="settings" aria-label="Settings">⚙️</button>
+      </header>
       <p class="muted">${formatLongDate(localDateIso())}</p>
       <button class="btn primary huge" data-action="start">Start session</button>
       ${last ? `
@@ -38,6 +43,7 @@ function renderStart(container) {
   container.querySelector('[data-action="start"]').addEventListener('click', () => {
     store.dispatch('session.start', { id: uuid(), date: localDateIso(), startedAt: new Date().toISOString() });
   });
+  container.querySelector('[data-action="settings"]').addEventListener('click', openSettings);
 }
 
 /** Groups sets by exercise, in the order each exercise was first done. */
@@ -95,10 +101,14 @@ function renderSession(container, session) {
       ${groups.length ? '' : '<p class="empty">Add an exercise to start logging sets.</p>'}
       <button class="btn primary big" data-action="add-exercise">+ Add exercise</button>
     </section>`;
-  timer = setInterval(() => {
+  // Tick on each whole second since the start, so the clock never lags behind when the screen re-renders mid-second.
+  const tick = () => {
     const el = document.getElementById('session-timer');
-    if (el) el.textContent = elapsed(session);
-  }, 1000);
+    if (!el) return;
+    el.textContent = elapsed(session);
+    timer = setTimeout(tick, 1000 - ((Date.now() - Date.parse(session.startedAt)) % 1000));
+  };
+  timer = setTimeout(tick, 1000 - ((Date.now() - Date.parse(session.startedAt)) % 1000));
   container.querySelector('[data-action="end"]').addEventListener('click', () => endSession(session));
   container.querySelector('[data-action="menu"]').addEventListener('click', () => openMenu(session));
   container.querySelector('[data-action="add-exercise"]').addEventListener('click', () => openPicker(session));
@@ -225,6 +235,7 @@ function openSetSheet(sessionId, exercise, set = null) {
     });
     close();
     if (isPr(sessionFlags(store.view().activeSession?.sets ?? []).get(id))) toast('🏆 New PR!');
+    onSetSaved();
   });
   el.querySelector('[data-action="delete"]')?.addEventListener('click', async () => {
     close();
@@ -235,9 +246,14 @@ function openSetSheet(sessionId, exercise, set = null) {
 function openMenu(session) {
   const { el, close } = openSheet(`
     <div class="stack">
+      <button class="btn secondary big" data-action="settings">Settings</button>
       <button class="btn danger big" data-action="discard">Discard session</button>
       <button class="btn secondary big" data-close>Cancel</button>
     </div>`);
+  el.querySelector('[data-action="settings"]').addEventListener('click', () => {
+    close();
+    openSettings();
+  });
   el.querySelector('[data-action="discard"]').addEventListener('click', async () => {
     close();
     const ok = await confirmDialog('Discard this workout? All its sets will be deleted.', { ok: 'Discard', danger: true });
