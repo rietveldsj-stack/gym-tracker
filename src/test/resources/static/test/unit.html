@@ -3,6 +3,7 @@
 <title>Unit tests</title>
 <script type="module">
   import { parseWeight, formatSet, formatSetCount, formatDuration, formatClock, formatCountdown } from '/js/format.js';
+  import { prFlags, isPr } from '/js/records.js';
   import * as store from '/js/store.js';
   const { applyOps } = store;
 
@@ -98,6 +99,42 @@
     store.shift();
     store.applyServerSnapshot({ exercises: [] }, before);
     eq(store.view().exercises.filter((e) => e.id === 'ack2').length, 1);
+  });
+
+  const ws = (id, weightKg, reps, minute, type = 'WORK') =>
+    ({ id, exerciseId: 'e1', weightKg, reps, type, loggedAt: `2026-10-05T08:${minute}:00.000Z` });
+  const history = { e1: {
+    heaviest: { weightKg: '60.00', reps: 5, date: '2026-09-28' },
+    repRecords: [{ weightKg: '60.00', reps: 5 }, { weightKg: '40.00', reps: 10 }, { weightKg: '0.00', reps: 20 }],
+  } };
+
+  test('prFlags: heavier than ever is a heaviest-weight PR', () => {
+    eq(prFlags([ws('a', 62.5, 3, '10')], history).get('a'), { heaviest: true, reps: false });
+  });
+  test('prFlags: more reps at a weight done before is a rep PR', () => {
+    eq(prFlags([ws('a', 40, 12, '10')], history).get('a'), { heaviest: false, reps: true });
+  });
+  test('prFlags: equal reps, or a lighter weight never done before, is no PR', () => {
+    const flags = prFlags([ws('a', 40, 10, '10'), ws('b', 30, 5, '11')], history);
+    eq([isPr(flags.get('a')), isPr(flags.get('b'))], [false, false]);
+  });
+  test('prFlags: bodyweight can be a rep PR but never a heaviest PR', () => {
+    eq(prFlags([ws('a', 0, 25, '10')], history).get('a'), { heaviest: false, reps: true });
+  });
+  test('prFlags: the first set ever of an exercise is no PR', () => {
+    eq(isPr(prFlags([ws('a', 40, 10, '10')], {}).get('a')), false);
+  });
+  test('prFlags: earlier sets in the same session count as history', () => {
+    const flags = prFlags([ws('a', 40, 10, '10'), ws('b', 40, 11, '11'), ws('c', 45, 5, '12')], {});
+    eq([isPr(flags.get('a')), flags.get('b'), flags.get('c')], [false, { heaviest: false, reps: true }, { heaviest: true, reps: false }]);
+  });
+  test('prFlags: warmups are never PRs and do not count as history', () => {
+    const flags = prFlags([ws('w', 100, 1, '09', 'WARMUP'), ws('a', 40, 10, '10')], {});
+    eq([flags.has('w'), isPr(flags.get('a'))], [false, false]);
+  });
+  test('prFlags: order follows loggedAt, not array order', () => {
+    const flags = prFlags([ws('late', 45, 5, '12'), ws('early', 40, 10, '10')], {});
+    eq([isPr(flags.get('early')), flags.get('late').heaviest], [false, true]);
   });
 
   window.__results = results;

@@ -6,6 +6,7 @@ import {
   MUSCLE_GROUPS, muscleLabel, formatSet, formatSetCount, formatClock, formatDuration, formatDate, formatLongDate, parseWeight,
 } from '../format.js';
 import { openExerciseForm } from './exercises.js';
+import { prFlags, isPr, recordsByExercise } from '../records.js';
 
 let timer = null;
 const byTime = (a, b) => Date.parse(a.loggedAt) - Date.parse(b.loggedAt);
@@ -53,12 +54,19 @@ function elapsed(session) {
   return formatClock((Date.now() - Date.parse(session.startedAt)) / 1000);
 }
 
-function setRowExtras(set) {
-  return set.type === 'WARMUP' ? '<span class="tag">Warmup</span>' : '';
+function setRowExtras(set, flags) {
+  const warmup = set.type === 'WARMUP' ? '<span class="tag">Warmup</span>' : '';
+  const pr = isPr(flags.get(set.id)) ? '<span class="pr" aria-label="Personal record">🏆</span>' : '';
+  return warmup + pr;
+}
+
+function sessionFlags(sets) {
+  return prFlags(sets, recordsByExercise(store.view().exercises));
 }
 
 function renderSession(container, session) {
   const groups = groupSets(session.sets);
+  const flags = sessionFlags(session.sets);
   container.innerHTML = `
     <section class="screen">
       <header class="topbar">
@@ -79,7 +87,7 @@ function renderSession(container, session) {
               <li><button class="set-row" data-set="${set.id}">
                 <span class="set-no">${i + 1}</span>
                 <span>${formatSet(set.weightKg, set.reps)}</span>
-                ${setRowExtras(set)}
+                ${setRowExtras(set, flags)}
               </button></li>`).join('')}
           </ul>
           <button class="btn secondary small" data-add-set="${group.exerciseId}">+ Set</button>
@@ -216,6 +224,7 @@ function openSetSheet(sessionId, exercise, set = null) {
       id, sessionId, exerciseId: exercise.id, weightKg, reps, type, loggedAt: set?.loggedAt ?? new Date().toISOString(),
     });
     close();
+    if (isPr(sessionFlags(store.view().activeSession?.sets ?? []).get(id))) toast('🏆 New PR!');
   });
   el.querySelector('[data-action="delete"]')?.addEventListener('click', async () => {
     close();
@@ -239,12 +248,18 @@ function openMenu(session) {
 }
 
 export function buildSummary(session, endedAt) {
+  const flags = sessionFlags(session.sets);
   return {
     date: session.date,
     durationSeconds: Math.round((Date.parse(endedAt) - Date.parse(session.startedAt)) / 1000),
     exerciseCount: new Set(session.sets.map((s) => s.exerciseId)).size,
     workSetCount: session.sets.filter((s) => s.type === 'WORK').length,
-    prs: [],
+    prs: [...session.sets].sort(byTime).filter((s) => isPr(flags.get(s.id))).map((s) => ({
+      name: s.exerciseName,
+      weightKg: s.weightKg,
+      reps: s.reps,
+      kind: flags.get(s.id).heaviest ? 'heaviest weight' : 'rep record',
+    })),
   };
 }
 
