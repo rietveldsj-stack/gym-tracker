@@ -1,6 +1,7 @@
-// Serves the app's own files from the cache straight away and refreshes them in the background,
-// so the app opens instantly (also offline) and picks up a new deploy on the next launch.
-const CACHE = 'gym-tracker-v1';
+// Serves the app's own files from a cache that belongs to one build. Maven fills in the build id, so every deploy
+// changes this file; the browser then installs the new service worker, which downloads a complete new cache
+// before it takes over. Files are never mixed between versions, and the app always opens offline.
+const CACHE = 'gym-tracker-@build.id@';
 const ASSETS = [
   '/',
   '/index.html',
@@ -32,7 +33,9 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE)
+    .then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -50,18 +53,9 @@ self.addEventListener('fetch', (event) => {
       || url.pathname === '/login' || url.pathname.startsWith('/test/')) return;
 
   const key = event.request.mode === 'navigate' ? '/index.html' : url.pathname;
-  event.respondWith(caches.open(CACHE).then(async (cache) => {
-    const cached = await cache.match(key);
-    const network = fetch(event.request).then((response) => {
-      if (response.ok) cache.put(key, response.clone());
-      return response;
-    });
-    if (cached) {
-      event.waitUntil(network.catch(() => {}));
-      return cached;
-    }
-    return network;
-  }));
+  event.respondWith(caches.open(CACHE)
+    .then((cache) => cache.match(key))
+    .then((cached) => cached || fetch(event.request)));
 });
 
 self.addEventListener('push', (event) => {

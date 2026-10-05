@@ -3,11 +3,32 @@ function csrfToken() {
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+const TIMEOUT_MS = 10000;
+
+// Every API call goes through one queue, one at a time. When the server session is gone (iOS dropped the cookie,
+// or a deploy restarted the server) the first call logs in again with the single-use remember-me token; a second
+// call racing it would present the old token, trip Spring's cookie-theft check and sign her out.
+let queue = Promise.resolve();
+
 /**
- * Result kinds: ok | network (no connection or server error, try again later) | unauthorized (401)
+ * Result kinds: ok | network (no connection, timeout or server error: try again later) | unauthorized (401)
  * | forbidden (403, usually a missing CSRF cookie) | rejected (other 4xx, with the server's message).
  */
-export async function request(method, path, body, { form = false } = {}) {
+export function request(method, path, body, options = {}) {
+  const run = queue.then(async () => {
+    let result = await send(method, path, body, options);
+    if (result.kind === 'forbidden' && method !== 'GET' && path !== '/login') {
+      // Missing or stale CSRF cookie: fetch a fresh one and retry once.
+      await send('GET', '/api/me');
+      result = await send(method, path, body, options);
+    }
+    return result;
+  });
+  queue = run.catch(() => {});
+  return run;
+}
+
+async function send(method, path, body, { form = false } = {}) {
   const headers = {};
   if (method !== 'GET') headers['X-XSRF-TOKEN'] = csrfToken();
   let payload;
@@ -16,10 +37,14 @@ export async function request(method, path, body, { form = false } = {}) {
     payload = form ? new URLSearchParams(body).toString() : JSON.stringify(body);
   }
   let response;
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS); // weak signal must not hang the app or the outbox
   try {
-    response = await fetch(path, { method, headers, body: payload, credentials: 'same-origin', cache: 'no-store' });
+    response = await fetch(path, { method, headers, body: payload, credentials: 'same-origin', cache: 'no-store', signal: abort.signal });
   } catch {
     return { kind: 'network' };
+  } finally {
+    clearTimeout(timer);
   }
   const text = await response.text().catch(() => '');
   let data = null;

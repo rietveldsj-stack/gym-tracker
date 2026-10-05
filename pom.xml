@@ -15,6 +15,8 @@
 
     <properties>
         <java.version>25</java.version>
+        <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+        <build.id>${maven.build.timestamp}</build.id>
     </properties>
 
     <dependencies>
@@ -120,6 +122,23 @@
 
     <build>
         <finalName>app</finalName>
+        <resources>
+            <!-- Only sw.js is filtered: it gets the build id (@build.id@) so each deploy has its own cache. -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>static/sw.js</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>static/sw.js</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

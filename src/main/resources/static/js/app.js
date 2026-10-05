@@ -21,6 +21,16 @@ const viewEl = document.getElementById('view');
 const tabsEl = document.getElementById('tabs');
 const syncEl = document.getElementById('syncbar');
 let signedIn = false;
+let loginShown = false;
+const KNOWN_USER_KEY = 'gt.knownUser';
+
+function knownUser() {
+  try {
+    return localStorage.getItem(KNOWN_USER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 function render() {
   if (!signedIn) return;
@@ -39,6 +49,8 @@ function render() {
 }
 
 function showLogin() {
+  if (loginShown) return; // a background sync attempt must not wipe what she is typing
+  loginShown = true;
   signedIn = false;
   tabsEl.hidden = true;
   syncEl.hidden = true;
@@ -47,7 +59,13 @@ function showLogin() {
 }
 
 function showApp() {
+  loginShown = false;
   signedIn = true;
+  try {
+    localStorage.setItem(KNOWN_USER_KEY, '1');
+  } catch {
+    // ignore
+  }
   render();
   sync.flush();
 }
@@ -90,6 +108,10 @@ async function boot() {
   sync.onRejected((message) => toast(message));
   store.subscribe(onStoreChange);
   sync.startSync();
+  if (knownUser()) {
+    showApp(); // open straight from the saved data; the sync that follows shows the login screen on a 401
+    return;
+  }
   const me = await request('GET', '/api/me');
   if (me.kind === 'unauthorized') showLogin();
   else showApp(); // signed in, or offline: work from the saved snapshot

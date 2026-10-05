@@ -76,6 +76,19 @@ class SecurityIntegrationTest extends IntegrationTestBase {
         mvc.perform(get("/api/me").cookie(rememberMe)).andExpect(status().isOk());
     }
 
+    @Test
+    void rememberMeLoginHandsOutAFreshCsrfCookie() throws Exception {
+        // After a server restart her XSRF cookie survives but the remember-me login rotates the token; the response
+        // must carry the new one, or her next write is rejected.
+        Cookie rememberMe = login("tester", "secret-pass").andReturn().getResponse().getCookie("remember-me");
+        MvcResult result = mvc.perform(get("/api/me").cookie(rememberMe, new Cookie("XSRF-TOKEN", "old-token")))
+                .andExpect(status().isOk()).andReturn();
+        Cookie[] xsrf = java.util.Arrays.stream(result.getResponse().getCookies())
+                .filter(c -> c.getName().equals("XSRF-TOKEN")).toArray(Cookie[]::new);
+        assertThat(xsrf).isNotEmpty();
+        assertThat(xsrf[xsrf.length - 1].getValue()).isNotEmpty().isNotEqualTo("old-token");
+    }
+
     private org.springframework.test.web.servlet.ResultActions login(String username, String password) throws Exception {
         return mvc.perform(post("/login").with(xsrf()).contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("username", username).param("password", password));

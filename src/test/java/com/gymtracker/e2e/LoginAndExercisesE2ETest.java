@@ -105,4 +105,44 @@ class LoginAndExercisesE2ETest extends E2ETestBase {
         assertThat(page.getByLabel("Name")).isVisible();
         assertThat(button("Plank")).isVisible(); // the delayed update still happened
     }
+
+    @Test
+    void parallelRequestsAfterSessionLossKeepHerSignedIn() {
+        signIn();
+        for (int i = 0; i < 2; i++) {
+            context.clearCookies(new BrowserContext.ClearCookiesOptions().setName("JSESSIONID"));
+            // e.g. saving a set with alerts on: sync and the rest timer call the API at the same moment
+            page.evaluate("() => import('/js/api.js').then((api) => Promise.all(["
+                    + "api.request('GET', '/api/exercises'), api.request('GET', '/api/sessions'), api.request('GET', '/api/me')]))");
+        }
+        context.clearCookies(new BrowserContext.ClearCookiesOptions().setName("JSESSIONID"));
+        page.reload();
+        assertThat(page.locator("#tabs")).isVisible();
+        waitUntilSynced();
+        assertThat(page.getByLabel("Password")).hasCount(0);
+    }
+
+    @Test
+    void opensStraightAwayOnWeakSignal() {
+        signIn();
+        // The server doesn't answer at all, like one bar of signal in a basement gym.
+        page.addInitScript("const realFetch = window.fetch; window.fetch = (url, options) => "
+                + "String(url).includes('/api/') ? new Promise(() => {}) : realFetch(url, options);");
+        page.reload();
+        assertThat(button("Start session")).isVisible(new com.microsoft.playwright.assertions.LocatorAssertions.IsVisibleOptions().setTimeout(3000));
+    }
+
+    @Test
+    void loginFormIsNotWipedWhileChangesWait() {
+        signIn();
+        context.setOffline(true);
+        createExerciseViaUi("Plank", "Core");
+        context.clearCookies();
+        context.setOffline(false);
+        page.reload();
+        page.getByLabel("Username").fill("tester");
+        page.evaluate("() => window.dispatchEvent(new Event('online'))"); // a background sync attempt
+        page.evaluate("() => new Promise((resolve) => setTimeout(resolve, 500))");
+        assertThat(page.getByLabel("Username")).hasValue("tester");
+    }
 }

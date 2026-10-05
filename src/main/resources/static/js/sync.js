@@ -36,14 +36,8 @@ function signedOut() {
 
 async function send(op) {
   const [method, path, body] = ROUTES[op.kind](op.payload);
-  let result = await request(method, path, body);
-  if (result.kind === 'forbidden') {
-    // Missing or stale CSRF cookie (iOS may drop cookies when the app is killed): fetch a fresh one, retry once.
-    await request('GET', '/api/me');
-    result = await request(method, path, body);
-    if (result.kind === 'forbidden') return { kind: 'network' }; // keep the change and try again later
-  }
-  return result;
+  const result = await request(method, path, body); // api.js already retried once with a fresh CSRF cookie
+  return result.kind === 'forbidden' ? { kind: 'network' } : result; // keep the change and try again later
 }
 
 async function refresh() {
