@@ -18,6 +18,7 @@ const ASSETS = [
   '/js/ui.js',
   '/js/util.js',
   '/js/views/exercises.js',
+  '/js/views/history.js',
   '/js/views/login.js',
   '/js/views/workout.js',
 ];

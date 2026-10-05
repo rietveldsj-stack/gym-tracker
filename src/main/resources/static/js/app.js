@@ -6,10 +6,12 @@ import { toast } from './ui.js';
 import { renderLogin } from './views/login.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
+import * as history from './views/history.js';
 
 const TABS = [
   { id: 'workout', label: 'Workout', icon: '🏋️', view: workout },
   { id: 'exercises', label: 'Exercises', icon: '📋', view: exercises },
+  { id: 'history', label: 'History', icon: '🗓️', view: history },
 ];
 
 const viewEl = document.getElementById('view');

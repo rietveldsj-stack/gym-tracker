@@ -255,6 +255,7 @@ async function endSession(session) {
   const endedAt = new Date().toISOString();
   const summary = buildSummary(session, endedAt); // before dispatching, while the records still predate this workout
   store.dispatch('session.end', { id: session.id, endedAt });
+  if (!empty) store.cacheSessionDetail(session.id, { ...session, endedAt });
   if (empty) {
     toast('Empty workout discarded');
     return;
