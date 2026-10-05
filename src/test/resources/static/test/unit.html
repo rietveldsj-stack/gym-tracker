@@ -1,0 +1,88 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Unit tests</title>
+<script type="module">
+  import { parseWeight, formatSet, formatSetCount, formatDuration, formatClock, formatCountdown } from '/js/format.js';
+  import { applyOps } from '/js/store.js';
+
+  const results = [];
+  const test = (name, fn) => {
+    try { fn(); results.push({ name, ok: true }); } catch (e) { results.push({ name, ok: false, error: String(e) }); }
+  };
+  const eq = (actual, expected) => {
+    const a = JSON.stringify(actual);
+    const b = JSON.stringify(expected);
+    if (a !== b) throw new Error(`expected ${b} but got ${a}`);
+  };
+  const empty = () => ({ exercises: [], activeSession: null, history: [], weekly: null, exerciseStats: {}, sessionDetails: {} });
+  const start = { kind: 'session.start', payload: { id: 's1', date: '2026-10-05', startedAt: '2026-10-05T08:00:00.000Z' } };
+  const squat = { kind: 'exercise.put', payload: { id: 'e1', name: 'Squat', muscleGroup: 'QUADS' } };
+  const set = (id, weightKg, reps, loggedAt, type = 'WORK') =>
+    ({ kind: 'set.put', payload: { id, sessionId: 's1', exerciseId: 'e1', weightKg, reps, type, loggedAt } });
+
+  test('parseWeight accepts dot and comma decimals', () => {
+    eq(parseWeight('42.5'), 42.5);
+    eq(parseWeight('42,5'), 42.5);
+    eq(parseWeight(' 60 '), 60);
+  });
+  test('parseWeight rounds to 0.25 and clamps to 0–500', () => {
+    eq(parseWeight('42.3'), 42.25);
+    eq(parseWeight('-5'), 0);
+    eq(parseWeight('900'), 500);
+  });
+  test('parseWeight rejects text that is not a number', () => {
+    eq(parseWeight(''), null);
+    eq(parseWeight('abc'), null);
+  });
+  test('formatSet shows kilograms or bodyweight', () => {
+    eq(formatSet(40, 10), '40 kg × 10');
+    eq(formatSet('42.50', 8), '42.5 kg × 8');
+    eq(formatSet(42.25, 5), '42.25 kg × 5');
+    eq(formatSet(0, 12), 'Bodyweight × 12');
+  });
+  test('formatSetCount', () => {
+    eq(formatSetCount(1), '1 set');
+    eq(formatSetCount(3), '3 sets');
+  });
+  test('time formats', () => {
+    eq(formatDuration(2400), '40 min');
+    eq(formatDuration(3900), '1 h 05 min');
+    eq(formatClock(2537), '0:42:17');
+    eq(formatCountdown(90), '1:30');
+    eq(formatCountdown(0.2), '0:01');
+  });
+  test('applyOps: create an exercise and log a set while offline', () => {
+    const state = applyOps(empty(), [squat, start, set('x1', 40, 10, '2026-10-05T08:10:00.000Z')]);
+    eq(state.exercises.map((e) => e.name), ['Squat']);
+    eq(state.activeSession.sets.map((s) => [s.exerciseName, s.weightKg]), [['Squat', 40]]);
+  });
+  test('applyOps: ending moves the session to history', () => {
+    const state = applyOps(empty(), [squat, start, set('x1', 40, 10, '2026-10-05T08:10:00.000Z'),
+      { kind: 'session.end', payload: { id: 's1', endedAt: '2026-10-05T08:42:00.000Z' } }]);
+    eq(state.activeSession, null);
+    eq([state.history[0].durationSeconds, state.history[0].setCount, state.history[0].muscleGroups], [2520, 1, ['QUADS']]);
+  });
+  test('applyOps: ending an empty session discards it', () => {
+    const state = applyOps(empty(), [start, { kind: 'session.end', payload: { id: 's1', endedAt: '2026-10-05T08:01:00.000Z' } }]);
+    eq([state.activeSession, state.history.length], [null, 0]);
+  });
+  test('applyOps: editing and deleting sets and exercises', () => {
+    const state = applyOps(empty(), [squat, start,
+      set('x1', 40, 10, '2026-10-05T08:10:00.000Z'),
+      set('x1', 42.5, 8, '2026-10-05T08:10:00.000Z'),
+      set('x2', 40, 10, '2026-10-05T08:12:00.000Z'),
+      { kind: 'set.delete', payload: { id: 'x2' } },
+      { kind: 'exercise.put', payload: { id: 'e2', name: 'Bench', muscleGroup: 'CHEST' } },
+      { kind: 'exercise.delete', payload: { id: 'e2' } }]);
+    eq(state.activeSession.sets.map((s) => [s.id, s.weightKg, s.reps]), [['x1', 42.5, 8]]);
+    eq(state.exercises.map((e) => e.id), ['e1']);
+  });
+  test('applyOps: sets are ordered by time even when timestamp formats differ', () => {
+    const state = applyOps(empty(), [squat, start,
+      set('server', 40, 10, '2026-10-05T08:10:00Z'),
+      set('phone', 40, 10, '2026-10-05T08:09:59.500Z')]);
+    eq(state.activeSession.sets.map((s) => s.id), ['phone', 'server']);
+  });
+
+  window.__results = results;
+</script>

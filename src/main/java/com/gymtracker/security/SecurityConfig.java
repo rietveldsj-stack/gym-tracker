@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -75,6 +76,16 @@ public class SecurityConfig {
         services.setTokenValiditySeconds(ONE_YEAR_SECONDS);
         services.setUseSecureCookie(secureCookies);
         return services;
+    }
+
+    /**
+     * The app's own files skip the security filters. Browsers load them in parallel; if each request ran a
+     * remember-me login, the single-use tokens would race, trip the cookie-theft check and sign her out.
+     */
+    @Bean
+    WebSecurityCustomizer staticFilesBypassSecurity() {
+        return web -> web.ignoring().requestMatchers("/", "/index.html", "/styles.css", "/manifest.json", "/sw.js",
+                "/icons/**", "/js/**", "/vendor/**", "/test/**");
     }
 
     @Bean

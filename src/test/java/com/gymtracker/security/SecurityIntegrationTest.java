@@ -64,6 +64,18 @@ class SecurityIntegrationTest extends IntegrationTestBase {
         mvc.perform(get("/actuator/health")).andExpect(status().isOk());
     }
 
+    @Test
+    void staticFilesDoNotUseUpTheRememberMeToken() throws Exception {
+        // Browsers load the page's files in parallel; if each one ran a remember-me login, the single-use tokens
+        // would race and trip Spring's cookie-theft check, signing her out.
+        Cookie rememberMe = login("tester", "secret-pass").andReturn().getResponse().getCookie("remember-me");
+        for (String path : new String[] {"/", "/index.html", "/styles.css", "/js/app.js", "/sw.js"}) {
+            MvcResult result = mvc.perform(get(path).cookie(rememberMe)).andReturn();
+            assertThat(result.getResponse().getCookie("remember-me")).as(path).isNull();
+        }
+        mvc.perform(get("/api/me").cookie(rememberMe)).andExpect(status().isOk());
+    }
+
     private org.springframework.test.web.servlet.ResultActions login(String username, String password) throws Exception {
         return mvc.perform(post("/login").with(xsrf()).contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("username", username).param("password", password));
