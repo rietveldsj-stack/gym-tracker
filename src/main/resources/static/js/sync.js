@@ -47,6 +47,7 @@ async function send(op) {
 }
 
 async function refresh() {
+  const ackedBefore = store.ackedIds();
   const results = {};
   const sources = [
     ['exercises', '/api/exercises'],
@@ -60,7 +61,7 @@ async function refresh() {
     if (result.kind !== 'ok') return 'offline';
     results[key] = result.data;
   }
-  store.setSnapshot({ ...results, weeklyAsOf: new Date().toISOString() });
+  store.applyServerSnapshot({ ...results, weeklyAsOf: new Date().toISOString() }, ackedBefore);
   return 'idle';
 }
 
@@ -77,7 +78,7 @@ async function flushOnce() {
     } else if (result.kind === 'unauthorized') {
       return signedOut();
     } else if (result.kind === 'rejected') {
-      store.shift();
+      store.drop();
       rejectedHandler(result.message);
     } else {
       return 'offline';

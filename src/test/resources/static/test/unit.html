@@ -3,7 +3,8 @@
 <title>Unit tests</title>
 <script type="module">
   import { parseWeight, formatSet, formatSetCount, formatDuration, formatClock, formatCountdown } from '/js/format.js';
-  import { applyOps } from '/js/store.js';
+  import * as store from '/js/store.js';
+  const { applyOps } = store;
 
   const results = [];
   const test = (name, fn) => {
@@ -82,6 +83,21 @@
       set('server', 40, 10, '2026-10-05T08:10:00Z'),
       set('phone', 40, 10, '2026-10-05T08:09:59.500Z')]);
     eq(state.activeSession.sets.map((s) => s.id), ['phone', 'server']);
+  });
+
+  test('store: a change the server accepted stays visible until fresh server data arrives', () => {
+    store.dispatch('exercise.put', { id: 'ack1', name: 'Ack', muscleGroup: 'CORE' });
+    store.shift(); // the server accepted it; the snapshot does not have it yet
+    eq(store.view().exercises.filter((e) => e.id === 'ack1').length, 1);
+    store.applyServerSnapshot({ exercises: [] }, store.ackedIds());
+    eq(store.view().exercises.filter((e) => e.id === 'ack1').length, 0);
+  });
+  test('store: changes accepted during a refresh survive that refresh', () => {
+    const before = store.ackedIds();
+    store.dispatch('exercise.put', { id: 'ack2', name: 'Late', muscleGroup: 'CORE' });
+    store.shift();
+    store.applyServerSnapshot({ exercises: [] }, before);
+    eq(store.view().exercises.filter((e) => e.id === 'ack2').length, 1);
   });
 
   window.__results = results;

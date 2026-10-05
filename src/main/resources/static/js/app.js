@@ -43,6 +43,30 @@ function showApp() {
   sync.flush();
 }
 
+// A screen update between finger-down and finger-up replaces the button under the finger and the tap is lost,
+// so updates that arrive while a finger is down wait until the tap has been handled.
+let pointerDown = false;
+let renderPending = false;
+const afterTap = new MessageChannel(); // a message runs after the click event, and fake test clocks don't delay it
+afterTap.port1.onmessage = () => {
+  if (renderPending && !pointerDown) {
+    renderPending = false;
+    render();
+  }
+};
+const release = () => {
+  pointerDown = false;
+  if (renderPending) afterTap.port2.postMessage(null);
+};
+document.addEventListener('pointerdown', () => { pointerDown = true; }, true);
+document.addEventListener('pointerup', release, true);
+document.addEventListener('pointercancel', release, true);
+
+function onStoreChange() {
+  if (pointerDown) renderPending = true;
+  else render();
+}
+
 tabsEl.addEventListener('click', (event) => {
   const button = event.target.closest('[data-tab]');
   if (button) navigate({ tab: button.dataset.tab });
@@ -54,7 +78,7 @@ async function boot() {
   navigate({ tab: TABS[0].id });
   sync.onUnauthorized(showLogin);
   sync.onRejected((message) => toast(message));
-  store.subscribe(render);
+  store.subscribe(onStoreChange);
   sync.startSync();
   const me = await request('GET', '/api/me');
   if (me.kind === 'unauthorized') showLogin();

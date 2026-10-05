@@ -88,4 +88,20 @@ class LoginAndExercisesE2ETest extends E2ETestBase {
         }
         assertThat(page.getByLabel("Password")).hasCount(0);
     }
+
+    @Test
+    void tapSurvivesScreenUpdateWhileFingerIsDown() {
+        signIn();
+        waitUntilSynced();
+        tab("Exercises").click();
+        com.microsoft.playwright.options.BoundingBox box = page.getByLabel("Add exercise").boundingBox();
+        page.mouse().move(box.x + box.width / 2, box.y + box.height / 2);
+        page.mouse().down();
+        // A background change arrives while her finger is on the button.
+        page.evaluate("() => import('/js/store.js').then((s) => s.dispatch('exercise.put', "
+                + "{ id: '00000000-0000-4000-8000-000000000001', name: 'Plank', muscleGroup: 'CORE' }))");
+        page.mouse().up();
+        assertThat(page.getByLabel("Name")).isVisible();
+        assertThat(button("Plank")).isVisible(); // the delayed update still happened
+    }
 }

@@ -1,8 +1,11 @@
 import { uuid } from './util.js';
 
-// The screen shows view() = the last server snapshot with the outbox (pending changes) applied on top.
+// The screen shows view() = the last server snapshot with pending changes applied on top. A change the server
+// accepted moves from the outbox to `acked` and stays applied until a snapshot fetched after it arrives, so it
+// never blinks out of view between being sent and the refresh (or when the signal drops in between).
 const SNAPSHOT_KEY = 'gt.snapshot.v1';
 const OUTBOX_KEY = 'gt.outbox.v1';
+const ACKED_KEY = 'gt.acked.v1';
 const EMPTY = { exercises: [], activeSession: null, history: [], weekly: null, weeklyAsOf: null, exerciseStats: {}, sessionDetails: {} };
 
 function load(key, fallback) {
@@ -24,6 +27,7 @@ function save(key, value) {
 
 let snapshot = { ...EMPTY, ...load(SNAPSHOT_KEY, {}) };
 let outbox = load(OUTBOX_KEY, []);
+let acked = load(ACKED_KEY, []);
 let cachedView = null;
 const listeners = new Set();
 const dispatchListeners = new Set();
@@ -57,10 +61,31 @@ export function peek() {
   return outbox[0];
 }
 
+/** The server accepted the oldest pending change. */
 export function shift() {
+  const op = outbox.shift();
+  if (op) acked.push(op);
+  save(OUTBOX_KEY, outbox);
+  save(ACKED_KEY, acked);
+  changed();
+}
+
+/** The server rejected the oldest pending change: forget it. */
+export function drop() {
   outbox.shift();
   save(OUTBOX_KEY, outbox);
   changed();
+}
+
+export function ackedIds() {
+  return acked.map((op) => op.opId);
+}
+
+/** Fresh server data, fetched after the changes in `ackedOpIds` were accepted, so those are now part of it. */
+export function applyServerSnapshot(patch, ackedOpIds) {
+  acked = acked.filter((op) => !ackedOpIds.includes(op.opId));
+  save(ACKED_KEY, acked);
+  setSnapshot(patch);
 }
 
 export function setSnapshot(patch) {
@@ -78,7 +103,7 @@ export function cacheExerciseStats(id, stats) {
 }
 
 export function view() {
-  if (!cachedView) cachedView = applyOps(structuredClone(snapshot), outbox);
+  if (!cachedView) cachedView = applyOps(structuredClone(snapshot), [...acked, ...outbox]);
   return cachedView;
 }
 
