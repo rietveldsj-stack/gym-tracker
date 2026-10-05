@@ -123,6 +123,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 
 | Method & path | Body | Result |
 |---|---|---|
+| `GET /api/me` | — | `{username}` when signed in, `401` otherwise. The app calls this first on start and before sending the outbox: it refreshes the CSRF cookie and performs any remember-me login on its own, before other requests run |
 | `GET /api/exercises` | — | Non-archived exercises, each with a `lastTime` field (`{weightKg, reps, date}` or null) and a `records` field (§5) |
 | `PUT /api/exercises/{id}` | `{name, muscleGroup}` | Creates or updates the exercise. `200` with the exercise |
 | `DELETE /api/exercises/{id}` | — | Archives the exercise. `204`. Archiving an already archived exercise is fine |
@@ -135,7 +136,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 | `PUT /api/sets/{id}` | `{sessionId, exerciseId, weightKg, reps, type, loggedAt}` | Creates or updates the set. `200` |
 | `DELETE /api/sets/{id}` | — | `204`. Deleting a set that no longer exists is fine |
 | `GET /api/exercises/{id}/stats` | — | `{records, sessions: [{date, maxWeightKg, est1rmKg}]}` for the exercise detail screen (§5) |
-| `GET /api/stats/weekly?weeks=12` | — | `[{weekStart, workouts, workSetsByMuscle: {QUADS: 12, …}}]`, oldest first, including weeks with zero. `weeks` is 1–52, default 12 |
+| `GET /api/stats/weekly?weeks=12&today=YYYY-MM-DD` | — | `[{weekStart, workouts, workSetsByMuscle: {QUADS: 12, …}}]`, oldest first, including weeks with zero. `weeks` is 1–52, default 12. `today` is the phone's local date (defaults to the server's date), so week boundaries follow her time zone |
 | `GET /api/push/public-key` | — | `{publicKey}`: the VAPID public key the phone needs to register for notifications |
 | `PUT /api/push/subscription` | `{endpoint, keys: {p256dh, auth}}` | Saves or updates the device's registration. `200` |
 | `PUT /api/rest-timer` | `{endsAt}` | Schedules the lock-screen alert, replacing any earlier one. `endsAt` must be in the future and at most 1 hour away, otherwise `400`. `204` |
@@ -151,7 +152,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 
 ### Stack
 - Plain HTML, CSS and JavaScript ES modules. No build step and no Node.js.
-- It is a home-screen web app (PWA): `manifest.webmanifest`, `apple-touch-icon` and `apple-mobile-web-app-capable`. It runs full-screen.
+- It is a home-screen web app (PWA): `manifest.json`, `apple-touch-icon` and `apple-mobile-web-app-capable`. It runs full-screen.
 - It follows the phone's light/dark setting through `prefers-color-scheme`. Tap targets are at least 44 pt.
 
 ### Modules (`static/js/`)
@@ -166,7 +167,11 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
   - **Network error:** stop; try again later.
   - **Rejected (4xx except 401):** remove the operation, show a message, and fetch a fresh snapshot.
   - **401:** keep the outbox and show the login screen. Sending resumes after login.
-- **`ui.js`:** shared building blocks: bottom sheet, confirm dialog, toast, and a stepper for the number fields.
+- **`ui.js`:** shared building blocks: bottom sheet, confirm dialog and toast.
+- **`util.js`:** `uuid()` (with a fallback where `crypto.randomUUID` is missing), HTML escaping and the local date.
+- **`format.js`:** muscle group labels, and formatting of weights, sets, durations and dates. Also `parseWeight`, which accepts both `42.5` and `42,5`.
+- **`router.js`:** the current screen and `navigate()`.
+- **`prefs.js`:** rest-timer settings stored on the phone.
 - **`views/`:** `login.js`, `workout.js`, `exercises.js` (list, form and detail screen), `history.js`, `stats.js`, `settings.js`.
 - **`records.js`:** PR detection for the open session (§5). Pure functions, no screen code.
 - **`rest.js`:** the rest timer: countdown, ±15 s, skip, beep, and calling `/api/rest-timer` when alerts are on.
@@ -363,7 +368,7 @@ An exercise's `records` (included in `GET /api/exercises` and `GET /api/exercise
 5. **Rest timer:** using Playwright's simulated clock, saving a set shows the rest bar at 1:30. +15 s gives 1:45. After the time passes the bar shows "Rest over". Skip hides it.
 6. **Charts:** after two ended sessions, the exercise detail chart and both Stats charts draw (a canvas is present and there's no error in the console).
 
-**JavaScript unit tests** for `records.js`: run in the same WebKit browser through a small test page (`/test/records.html`, only included in tests), covering the PR rules above.
+**JavaScript unit tests** for `records.js`, `format.js` and the store's `applyOps`: run in the same WebKit browser through a small test page (`/test/unit.html`, only included in tests), covering the PR rules above, weight parsing and the offline view.
 
 **Manual on her iPhone:**
 - Add to Home Screen.
