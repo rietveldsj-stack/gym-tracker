@@ -1,7 +1,10 @@
 package com.gymtracker.exercise;
 
+import com.gymtracker.stats.ExerciseHistory;
+import com.gymtracker.stats.StatsService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,19 +21,25 @@ import org.springframework.web.bind.annotation.RestController;
 class ExerciseController {
 
     private final ExerciseService service;
+    private final StatsService stats;
 
-    ExerciseController(ExerciseService service) {
+    ExerciseController(ExerciseService service, StatsService stats) {
         this.service = service;
+        this.stats = stats;
     }
 
     @GetMapping
     List<ExerciseResponse> list() {
-        return service.listActive().stream().map(ExerciseResponse::of).toList();
+        Map<UUID, ExerciseHistory> histories = stats.historyByExercise();
+        return service.listActive().stream()
+                .map(e -> ExerciseResponse.of(e, histories.getOrDefault(e.getId(), ExerciseHistory.EMPTY)))
+                .toList();
     }
 
     @PutMapping("/{id}")
     ExerciseResponse put(@PathVariable UUID id, @Valid @RequestBody ExerciseRequest request) {
-        return ExerciseResponse.of(service.upsert(id, request));
+        Exercise exercise = service.upsert(id, request);
+        return ExerciseResponse.of(exercise, stats.historyFor(id));
     }
 
     @DeleteMapping("/{id}")
