@@ -26,15 +26,25 @@ class AuthController {
     record RegisterRequest(String email, String password, String inviteCode) {
     }
 
+    record ForgotRequest(String email) {
+    }
+
+    record ResetRequest(String token, String password) {
+    }
+
+    static final String FORGOT_MESSAGE = "If an account exists for this email, we've sent a reset link.";
+
     private final AccountService accounts;
+    private final PasswordResetService resets;
     private final UserDetailsService userDetails;
     private final RememberMeServices rememberMe;
     private final SecurityContextRepository contextRepository;
     private final Clock clock;
 
-    AuthController(AccountService accounts, UserDetailsService userDetails, RememberMeServices rememberMe,
+    AuthController(AccountService accounts, PasswordResetService resets, UserDetailsService userDetails, RememberMeServices rememberMe,
                    SecurityContextRepository contextRepository, Clock clock) {
         this.accounts = accounts;
+        this.resets = resets;
         this.userDetails = userDetails;
         this.rememberMe = rememberMe;
         this.contextRepository = contextRepository;
@@ -59,5 +69,16 @@ class AuthController {
         PasswordChangeSignOutFilter.markSignedIn(request, clock.instant());
         rememberMe.loginSuccess(request, response, auth);
         return Map.of("email", user.getEmail());
+    }
+
+    @PostMapping("/forgot")
+    Map<String, String> forgot(@RequestBody ForgotRequest body) {
+        resets.requestReset(body.email());
+        return Map.of("message", FORGOT_MESSAGE);
+    }
+
+    @PostMapping("/reset")
+    Map<String, String> reset(@RequestBody ResetRequest body) {
+        return Map.of("email", resets.reset(body.token(), body.password()));
     }
 }

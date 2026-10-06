@@ -1,5 +1,6 @@
 package com.gymtracker.security;
 
+import com.gymtracker.account.AppUserRepository;
 import com.gymtracker.account.PasswordChangeSignOutFilter;
 import java.time.Clock;
 import javax.sql.DataSource;
@@ -18,6 +19,7 @@ import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.context.DelegatingSecurityContextRepository;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -88,6 +90,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             SecurityContextRepository securityContextRepository,
                                             Clock clock,
+                                            AppUserRepository users,
                                             RememberMeServices rememberMeServices,
                                             @Value("${app.remember-me-key}") String key) throws Exception {
         http
@@ -98,6 +101,7 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).spa())
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                .addFilterAfter(new PasswordChangeSignOutFilter(users, clock), RememberMeAuthenticationFilter.class)
                 .formLogin(form -> form
                         .loginProcessingUrl("/login")
                         .successHandler((request, response, authentication) -> {
