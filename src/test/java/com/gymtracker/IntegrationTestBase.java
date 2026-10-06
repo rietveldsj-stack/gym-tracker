@@ -37,9 +37,19 @@ public abstract class IntegrationTestBase {
     @Autowired
     protected JdbcTemplate jdbc;
 
+    /** The signed-in test account; tests may switch {@link #actingAs} to another account they created. */
+    protected UUID testerId;
+    protected String actingAs;
+
     @BeforeEach
     void cleanDatabase() {
         DbCleaner.clean(jdbc);
+        testerId = TestUsers.insert(jdbc, TestUsers.EMAIL);
+        actingAs = TestUsers.EMAIL;
+    }
+
+    protected UUID createUser(String email) {
+        return TestUsers.insert(jdbc, email);
     }
 
     /**
@@ -57,9 +67,10 @@ public abstract class IntegrationTestBase {
         };
     }
 
-    /** Signed in as the test user, with a valid CSRF cookie and header. */
-    protected static RequestPostProcessor signedIn() {
-        return request -> xsrf().postProcessRequest(user("tester").postProcessRequest(request));
+    /** Signed in as {@link #actingAs}, with a valid CSRF cookie and header. */
+    protected RequestPostProcessor signedIn() {
+        String email = actingAs;
+        return request -> xsrf().postProcessRequest(user(email).postProcessRequest(request));
     }
 
     protected ResultActions apiGet(String url) throws Exception {

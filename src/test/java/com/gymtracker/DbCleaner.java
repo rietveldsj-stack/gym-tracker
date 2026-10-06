@@ -12,7 +12,8 @@ public final class DbCleaner {
     public static void clean(JdbcTemplate jdbc) {
         for (int attempt = 1; ; attempt++) {
             try {
-                jdbc.execute("truncate table workout_set, workout_session, exercise, persistent_logins, push_subscription");
+                jdbc.execute("truncate table workout_set, workout_session, exercise, persistent_logins, "
+                        + "push_subscription, password_reset_token, app_user");
                 return;
             } catch (PessimisticLockingFailureException e) {
                 if (attempt == 5) {

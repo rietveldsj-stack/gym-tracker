@@ -5,8 +5,8 @@ export function renderLogin(container, { onSuccess }) {
     <section class="screen login">
       <h1>Gym Tracker</h1>
       <form class="stack" id="login-form">
-        <label class="field">Username
-          <input name="username" autocomplete="username" autocapitalize="none" autocorrect="off" required>
+        <label class="field">Email
+          <input name="email" type="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
         </label>
         <label class="field">Password
           <input name="password" type="password" autocomplete="current-password" required>
@@ -24,13 +24,13 @@ export function renderLogin(container, { onSuccess }) {
     error.hidden = true;
     await request('GET', '/api/me'); // makes sure the CSRF cookie exists
     const data = new FormData(form);
-    const result = await login(String(data.get('username')).trim(), String(data.get('password')));
+    const result = await login(String(data.get('email')).trim(), String(data.get('password')));
     button.disabled = false;
     if (result.kind === 'ok') {
       onSuccess();
       return;
     }
-    error.textContent = result.kind === 'network' ? 'No connection. Try again when you have signal.' : 'Wrong username or password';
+    error.textContent = result.kind === 'network' ? 'No connection. Try again when you have signal.' : 'Wrong email or password';
     error.hidden = false;
   });
 }

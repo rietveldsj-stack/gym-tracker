@@ -10,6 +10,6 @@ class MeController {
 
     @GetMapping("/api/me")
     Map<String, String> me(Principal principal) {
-        return Map.of("username", principal.getName());
+        return Map.of("email", principal.getName());
     }
 }

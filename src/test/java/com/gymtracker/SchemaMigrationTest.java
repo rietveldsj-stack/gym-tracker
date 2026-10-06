@@ -14,7 +14,8 @@ class SchemaMigrationTest extends IntegrationTestBase {
     void createsAllTables() {
         List<String> tables = jdbc.queryForList(
                 "select table_name from information_schema.tables where table_schema = 'public'", String.class);
-        assertThat(tables).contains("exercise", "workout_session", "workout_set", "persistent_logins", "push_subscription");
+        assertThat(tables).contains("exercise", "workout_session", "workout_set", "persistent_logins", "push_subscription",
+                "app_user", "password_reset_token");
     }
 
     @Test

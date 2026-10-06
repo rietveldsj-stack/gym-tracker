@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gymtracker.IntegrationTestBase;
+import com.gymtracker.TestUsers;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -23,13 +24,13 @@ class SecurityIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void meReturnsUsername() throws Exception {
-        apiGet("/api/me").andExpect(status().isOk()).andExpect(jsonPath("$.username").value("tester"));
+    void meReturnsEmail() throws Exception {
+        apiGet("/api/me").andExpect(status().isOk()).andExpect(jsonPath("$.email").value(TestUsers.EMAIL));
     }
 
     @Test
     void loginSucceedsAndRememberMeCookieSignsInWithoutSession() throws Exception {
-        MvcResult login = login("tester", "secret-pass").andExpect(status().isOk()).andReturn();
+        MvcResult login = login(TestUsers.EMAIL, TestUsers.PASSWORD).andExpect(status().isOk()).andReturn();
         Cookie rememberMe = login.getResponse().getCookie("remember-me");
         assertThat(rememberMe).isNotNull();
         assertThat(rememberMe.getMaxAge()).isEqualTo(365 * 24 * 3600);
@@ -37,20 +38,36 @@ class SecurityIntegrationTest extends IntegrationTestBase {
 
         mvc.perform(get("/api/me").cookie(rememberMe))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("tester"));
+                .andExpect(jsonPath("$.email").value(TestUsers.EMAIL));
+    }
+
+    @Test
+    void loginIgnoresCaseAndSpacesInEmail() throws Exception {
+        Cookie rememberMe = login("  Tester@Example.COM ", TestUsers.PASSWORD)
+                .andExpect(status().isOk()).andReturn().getResponse().getCookie("remember-me");
+        mvc.perform(get("/api/me").cookie(rememberMe))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(TestUsers.EMAIL));
+    }
+
+    @Test
+    void unknownEmailGetsTheSameMessageAsAWrongPassword() throws Exception {
+        login("nobody@example.com", TestUsers.PASSWORD)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Wrong email or password"));
     }
 
     @Test
     void wrongPasswordAnswers401WithMessage() throws Exception {
-        login("tester", "nope")
+        login(TestUsers.EMAIL, "nope")
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Wrong username or password"));
+                .andExpect(jsonPath("$.message").value("Wrong email or password"));
     }
 
     @Test
     void loginWithoutCsrfTokenIsForbidden() throws Exception {
         mvc.perform(post("/login").contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("username", "tester").param("password", "secret-pass"))
+                        .param("username", TestUsers.EMAIL).param("password", TestUsers.PASSWORD))
                 .andExpect(status().isForbidden());
     }
 
@@ -68,7 +85,7 @@ class SecurityIntegrationTest extends IntegrationTestBase {
     void staticFilesDoNotUseUpTheRememberMeToken() throws Exception {
         // Browsers load the page's files in parallel; if each one ran a remember-me login, the single-use tokens
         // would race and trip Spring's cookie-theft check, signing the user out.
-        Cookie rememberMe = login("tester", "secret-pass").andReturn().getResponse().getCookie("remember-me");
+        Cookie rememberMe = login(TestUsers.EMAIL, TestUsers.PASSWORD).andReturn().getResponse().getCookie("remember-me");
         for (String path : new String[] {"/", "/index.html", "/styles.css", "/js/app.js", "/sw.js"}) {
             MvcResult result = mvc.perform(get(path).cookie(rememberMe)).andReturn();
             assertThat(result.getResponse().getCookie("remember-me")).as(path).isNull();
@@ -80,7 +97,7 @@ class SecurityIntegrationTest extends IntegrationTestBase {
     void rememberMeLoginHandsOutAFreshCsrfCookie() throws Exception {
         // After a server restart the XSRF cookie survives but the remember-me login rotates the token; the response
         // must carry the new one, or the next write is rejected.
-        Cookie rememberMe = login("tester", "secret-pass").andReturn().getResponse().getCookie("remember-me");
+        Cookie rememberMe = login(TestUsers.EMAIL, TestUsers.PASSWORD).andReturn().getResponse().getCookie("remember-me");
         MvcResult result = mvc.perform(get("/api/me").cookie(rememberMe, new Cookie("XSRF-TOKEN", "old-token")))
                 .andExpect(status().isOk()).andReturn();
         Cookie[] xsrf = java.util.Arrays.stream(result.getResponse().getCookies())

@@ -7,12 +7,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
@@ -31,20 +28,6 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    UserDetailsService userDetailsService(@Value("${app.username}") String username,
-                                          @Value("${app.password}") String password,
-                                          PasswordEncoder encoder) {
-        return new InMemoryUserDetailsManager(singleUser(username, password, encoder));
-    }
-
-    static UserDetails singleUser(String username, String password, PasswordEncoder encoder) {
-        if (username == null || username.isBlank() || password == null || password.isBlank()) {
-            throw new IllegalStateException("APP_USERNAME and APP_PASSWORD must be set");
-        }
-        return User.withUsername(username.strip()).password(encoder.encode(password)).roles("USER").build();
     }
 
     static String requireRememberMeKey(String key) {
@@ -104,7 +87,7 @@ public class SecurityConfig {
                         .failureHandler((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/json");
-                            response.getWriter().write("{\"message\":\"Wrong username or password\"}");
+                            response.getWriter().write("{\"message\":\"Wrong email or password\"}");
                         }))
                 .rememberMe(remember -> remember.rememberMeServices(rememberMeServices).key(key))
                 .requestCache(cache -> cache.disable())

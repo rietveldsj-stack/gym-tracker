@@ -201,8 +201,9 @@ class WorkoutE2ETest extends E2ETestBase {
     void pickerShowsExercisesThatArriveWhileItIsOpen() {
         seedExercise("Squat", "QUADS");
         page.navigate("/");
-        page.getByLabel("Username").fill("tester");
-        page.getByLabel("Password").fill("secret-pass");
+        page.getByLabel("Email").fill(com.gymtracker.TestUsers.EMAIL);
+        page.getByLabel("Password", new com.microsoft.playwright.Page.GetByLabelOptions().setExact(true))
+                .fill(com.gymtracker.TestUsers.PASSWORD);
         // Hold back the first data load until the picker is open, like a slow first launch.
         page.route("**/api/exercises", route -> {
             page.waitForCondition(() -> page.locator(".picker-list").count() > 0);

@@ -44,6 +44,7 @@ public abstract class E2ETestBase {
     protected BrowserContext context;
     protected Page page;
     protected final List<String> pageErrors = new ArrayList<>();
+    protected UUID testerId;
 
     @BeforeAll
     static void launchBrowser() {
@@ -59,6 +60,7 @@ public abstract class E2ETestBase {
     @BeforeEach
     void openPage() {
         DbCleaner.clean(jdbc);
+        testerId = com.gymtracker.TestUsers.insert(jdbc, com.gymtracker.TestUsers.EMAIL);
         context = browser.newContext(new Browser.NewContextOptions()
                 .setBaseURL("http://localhost:" + port)
                 .setViewportSize(390, 844)
@@ -86,8 +88,8 @@ public abstract class E2ETestBase {
 
     protected void signIn() {
         page.navigate("/");
-        page.getByLabel("Username").fill("tester");
-        page.getByLabel("Password").fill("secret-pass");
+        page.getByLabel("Email").fill(com.gymtracker.TestUsers.EMAIL);
+        page.getByLabel("Password", new Page.GetByLabelOptions().setExact(true)).fill(com.gymtracker.TestUsers.PASSWORD);
         button("Sign in").click();
         assertThat(page.locator("#tabs")).isVisible();
         waitUntilSynced(); // tests start from loaded data; slow-load behaviour has its own tests

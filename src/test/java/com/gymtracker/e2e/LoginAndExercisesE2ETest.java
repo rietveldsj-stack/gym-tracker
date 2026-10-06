@@ -2,6 +2,7 @@ package com.gymtracker.e2e;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
+import com.gymtracker.TestUsers;
 import com.microsoft.playwright.BrowserContext;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -11,10 +12,10 @@ class LoginAndExercisesE2ETest extends E2ETestBase {
     @Test
     void wrongPasswordShowsError() {
         page.navigate("/");
-        page.getByLabel("Username").fill("tester");
-        page.getByLabel("Password").fill("wrong");
+        page.getByLabel("Email").fill(TestUsers.EMAIL);
+        page.getByLabel("Password", new com.microsoft.playwright.Page.GetByLabelOptions().setExact(true)).fill("wrong");
         button("Sign in").click();
-        assertThat(page.getByText("Wrong username or password")).isVisible();
+        assertThat(page.getByText("Wrong email or password")).isVisible();
     }
 
     @Test
@@ -140,9 +141,9 @@ class LoginAndExercisesE2ETest extends E2ETestBase {
         context.clearCookies();
         context.setOffline(false);
         page.reload();
-        page.getByLabel("Username").fill("tester");
+        page.getByLabel("Email").fill(TestUsers.EMAIL);
         page.evaluate("() => window.dispatchEvent(new Event('online'))"); // a background sync attempt
         page.evaluate("() => new Promise((resolve) => setTimeout(resolve, 500))");
-        assertThat(page.getByLabel("Username")).hasValue("tester");
+        assertThat(page.getByLabel("Email")).hasValue(TestUsers.EMAIL);
     }
 }
