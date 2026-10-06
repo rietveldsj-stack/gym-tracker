@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,7 +20,6 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -62,9 +62,9 @@ public class SecurityConfig {
     RememberMeServices rememberMeServices(@Value("${app.remember-me-key}") String key,
                                           @Value("${app.secure-cookies}") boolean secureCookies,
                                           UserDetailsService userDetailsService,
-                                          PersistentTokenRepository tokenRepository) {
-        var services = new PersistentTokenBasedRememberMeServices(
-                requireRememberMeKey(key), userDetailsService, tokenRepository);
+                                          PersistentTokenRepository tokenRepository,
+                                          JdbcTemplate jdbc) {
+        var services = new DeviceRememberMeServices(requireRememberMeKey(key), userDetailsService, tokenRepository, jdbc);
         services.setAlwaysRemember(true);
         services.setTokenValiditySeconds(ONE_YEAR_SECONDS);
         services.setUseSecureCookie(secureCookies);
@@ -123,6 +123,10 @@ public class SecurityConfig {
                             response.getWriter().write("{\"message\":\"Wrong email or password\"}");
                         }))
                 .rememberMe(remember -> remember.rememberMeServices(rememberMeServices).key(key))
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .deleteCookies("JSESSIONID")
+                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)))
                 .requestCache(cache -> cache.disable())
                 .exceptionHandling(exceptions -> exceptions.defaultAuthenticationEntryPointFor(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
