@@ -7,7 +7,7 @@ const TIMEOUT_MS = 10000;
 
 // Every API call goes through one queue, one at a time. When the server session is gone (iOS dropped the cookie,
 // or a deploy restarted the server) the first call logs in again with the single-use remember-me token; a second
-// call racing it would present the old token, trip Spring's cookie-theft check and sign her out.
+// call racing it would present the old token, trip Spring's cookie-theft check and sign the user out.
 let queue = Promise.resolve();
 
 /**

@@ -13,7 +13,7 @@ class SecurityConfigTest {
         assertThatThrownBy(() -> SecurityConfig.singleUser("", "pw", encoder))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("APP_USERNAME");
-        assertThatThrownBy(() -> SecurityConfig.singleUser("her", " ", encoder))
+        assertThatThrownBy(() -> SecurityConfig.singleUser("user", " ", encoder))
                 .isInstanceOf(IllegalStateException.class);
     }
 

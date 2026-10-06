@@ -51,9 +51,9 @@
 Five inputs or conditions the spec implies but doesn't spell out. Each one has a test in the task named after the arrow.
 
 1. **The CSRF or session cookie has disappeared when the outbox is sent.** iOS drops session cookies when the home-screen app is killed. Queued changes must still sync and must never be dropped. → Task 7, `changesSyncAfterSessionAndCsrfCookiesAreLost`.
-2. **The server session expired but the remember-me cookie is still valid.** She must stay signed in across reloads. Parallel remember-me logins would trigger Spring's cookie-theft detection and sign her out, so `/api/me` always runs first, on its own. → Task 7, `staysSignedInWhenServerSessionExpires`.
-3. **She types a decimal comma** (`42,5` on iPhones set to a European region). This must be read as 42.5 kg, not rejected or read as 425. → Task 7, unit page `parseWeight`; Task 8, `typedCommaWeightIsLoggedAsDecimal`.
-4. **She double-taps Save in the set sheet.** Exactly one set must be logged. → Task 8, `doubleTapOnSaveLogsOneSet`.
+2. **The server session expired but the remember-me cookie is still valid.** The user must stay signed in across reloads. Parallel remember-me logins would trigger Spring's cookie-theft detection and sign the user out, so `/api/me` always runs first, on its own. → Task 7, `staysSignedInWhenServerSessionExpires`.
+3. **The user types a decimal comma** (`42,5` on iPhones set to a European region). This must be read as 42.5 kg, not rejected or read as 425. → Task 7, unit page `parseWeight`; Task 8, `typedCommaWeightIsLoggedAsDecimal`.
+4. **The user double-taps Save in the set sheet.** Exactly one set must be logged. → Task 8, `doubleTapOnSaveLogsOneSet`.
 5. **A static file is added but not listed in the service worker's asset list.** The app then opens broken offline after a deploy. Every file under `static/` must be listed in `sw.js`. → Task 7, `ServiceWorkerAssetsTest` (and later tasks add their new files to that list).
 
 ## File Structure
@@ -708,7 +708,7 @@ class SecurityConfigTest {
         assertThatThrownBy(() -> SecurityConfig.singleUser("", "pw", encoder))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("APP_USERNAME");
-        assertThatThrownBy(() -> SecurityConfig.singleUser("her", " ", encoder))
+        assertThatThrownBy(() -> SecurityConfig.singleUser("user", " ", encoder))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -821,7 +821,7 @@ public class SecurityConfig {
 
     /**
      * Database-backed tokens. The hash-based variant signs cookies with the stored password hash, which changes
-     * on every start because the password is re-hashed with a new salt, so every deploy would sign her out.
+     * on every start because the password is re-hashed with a new salt, so every deploy would sign the user out.
      */
     @Bean
     RememberMeServices rememberMeServices(@Value("${app.remember-me-key}") String key,
@@ -4666,7 +4666,7 @@ async function refresh() {
 
 async function flushOnce() {
   // Always first and on its own: refreshes the CSRF cookie and lets a remember-me login finish before other
-  // requests. Parallel remember-me logins would trip Spring's cookie-theft check and sign her out.
+  // requests. Parallel remember-me logins would trip Spring's cookie-theft check and sign the user out.
   const me = await request('GET', '/api/me');
   if (me.kind === 'unauthorized') return signedOut();
   if (me.kind !== 'ok') return 'offline';
@@ -7475,7 +7475,7 @@ and a terminal in this project folder.
 ## 1. Make the secrets (on your Mac)
 
 ```bash
-# Her password: long and random, because the site and the code are public. Save it in your password manager.
+# The app password: long and random, because the site and the code are public. Save it in your password manager.
 openssl rand -base64 18
 # Key that signs the "stay signed in" cookie
 openssl rand -hex 32
@@ -7502,7 +7502,7 @@ PGPORT=${{Postgres.PGPORT}}
 PGDATABASE=${{Postgres.PGDATABASE}}
 PGUSER=${{Postgres.PGUSER}}
 PGPASSWORD=${{Postgres.PGPASSWORD}}
-APP_USERNAME=<her username>
+APP_USERNAME=<username>
 APP_PASSWORD=<the password from step 1>
 REMEMBER_ME_KEY=<the hex key from step 1>
 VAPID_PUBLIC_KEY=<from step 1>
@@ -7524,7 +7524,7 @@ In the service's **Settings**:
 - **Deploy logs:** **Deployments**, then the newest deploy, should end with `Started GymTrackerApplication`.
 - **Health:** open `https://<your-domain>/actuator/health`. It should show `{"status":"UP"}`.
 
-## 6. On her iPhone
+## 6. On the iPhone
 
 1. Open `https://<your-domain>` in **Safari** and sign in.
 2. Tap **Share**, then **Add to Home Screen**, then **Add**.
@@ -7540,7 +7540,7 @@ Then do a quick test:
 
 - **Price:** Railway's Hobby plan is about $5/month, which covers this app and its database.
 - **Restarts:** a deploy or restart drops a rest alert that is counting down at that moment.
-- **Staying signed in:** she stays signed in for a year, through restarts.
+- **Staying signed in:** the user stays signed in for a year, through restarts.
 ````
 
 - [ ] **Step 5: Final full test run**

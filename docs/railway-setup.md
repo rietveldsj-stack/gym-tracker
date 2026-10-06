@@ -6,7 +6,7 @@ and a terminal in this project folder.
 ## 1. Make the secrets (on your Mac)
 
 ```bash
-# Her password: long and random, because the site and the code are public. Save it in your password manager.
+# The app password: long and random, because the site and the code are public. Save it in your password manager.
 openssl rand -base64 18
 # Key that signs the "stay signed in" cookie
 openssl rand -hex 32
@@ -33,7 +33,7 @@ PGPORT=${{Postgres.PGPORT}}
 PGDATABASE=${{Postgres.PGDATABASE}}
 PGUSER=${{Postgres.PGUSER}}
 PGPASSWORD=${{Postgres.PGPASSWORD}}
-APP_USERNAME=<her username>
+APP_USERNAME=<username>
 APP_PASSWORD=<the password from step 1>
 REMEMBER_ME_KEY=<the hex key from step 1>
 VAPID_PUBLIC_KEY=<from step 1>
@@ -55,7 +55,7 @@ In the service's **Settings**:
 - **Deploy logs:** **Deployments**, then the newest deploy, should end with `Started GymTrackerApplication`.
 - **Health:** open `https://<your-domain>/actuator/health`. It should show `{"status":"UP"}`.
 
-## 6. On her iPhone
+## 6. On the iPhone
 
 1. Open `https://<your-domain>` in **Safari** and sign in.
 2. Tap **Share**, then **Add to Home Screen**, then **Add**.
@@ -71,4 +71,4 @@ Then do a quick test:
 
 - **Price:** Railway's Hobby plan is about $5/month, which covers this app and its database.
 - **Restarts:** a deploy or restart drops a rest alert that is counting down at that moment.
-- **Staying signed in:** she stays signed in for a year, through restarts.
+- **Staying signed in:** the user stays signed in for a year, through restarts.

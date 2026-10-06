@@ -67,7 +67,7 @@ class SecurityIntegrationTest extends IntegrationTestBase {
     @Test
     void staticFilesDoNotUseUpTheRememberMeToken() throws Exception {
         // Browsers load the page's files in parallel; if each one ran a remember-me login, the single-use tokens
-        // would race and trip Spring's cookie-theft check, signing her out.
+        // would race and trip Spring's cookie-theft check, signing the user out.
         Cookie rememberMe = login("tester", "secret-pass").andReturn().getResponse().getCookie("remember-me");
         for (String path : new String[] {"/", "/index.html", "/styles.css", "/js/app.js", "/sw.js"}) {
             MvcResult result = mvc.perform(get(path).cookie(rememberMe)).andReturn();
@@ -78,8 +78,8 @@ class SecurityIntegrationTest extends IntegrationTestBase {
 
     @Test
     void rememberMeLoginHandsOutAFreshCsrfCookie() throws Exception {
-        // After a server restart her XSRF cookie survives but the remember-me login rotates the token; the response
-        // must carry the new one, or her next write is rejected.
+        // After a server restart the XSRF cookie survives but the remember-me login rotates the token; the response
+        // must carry the new one, or the next write is rejected.
         Cookie rememberMe = login("tester", "secret-pass").andReturn().getResponse().getCookie("remember-me");
         MvcResult result = mvc.perform(get("/api/me").cookie(rememberMe, new Cookie("XSRF-TOKEN", "old-token")))
                 .andExpect(status().isOk()).andReturn();

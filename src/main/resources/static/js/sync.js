@@ -61,7 +61,7 @@ async function refresh() {
 
 async function flushOnce() {
   // Always first and on its own: refreshes the CSRF cookie and lets a remember-me login finish before other
-  // requests. Parallel remember-me logins would trip Spring's cookie-theft check and sign her out.
+  // requests. Parallel remember-me logins would trip Spring's cookie-theft check and sign the user out.
   const me = await request('GET', '/api/me');
   if (me.kind === 'unauthorized') return signedOut();
   if (me.kind !== 'ok') return 'offline';

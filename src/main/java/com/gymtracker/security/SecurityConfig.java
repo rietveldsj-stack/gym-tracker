@@ -63,7 +63,7 @@ public class SecurityConfig {
 
     /**
      * Database-backed tokens. The hash-based variant signs cookies with the stored password hash, which changes
-     * on every start because the password is re-hashed with a new salt, so every deploy would sign her out.
+     * on every start because the password is re-hashed with a new salt, so every deploy would sign the user out.
      */
     @Bean
     RememberMeServices rememberMeServices(@Value("${app.remember-me-key}") String key,
@@ -80,7 +80,7 @@ public class SecurityConfig {
 
     /**
      * The app's own files skip the security filters. Browsers load them in parallel; if each request ran a
-     * remember-me login, the single-use tokens would race, trip the cookie-theft check and sign her out.
+     * remember-me login, the single-use tokens would race, trip the cookie-theft check and sign the user out.
      */
     @Bean
     WebSecurityCustomizer staticFilesBypassSecurity() {

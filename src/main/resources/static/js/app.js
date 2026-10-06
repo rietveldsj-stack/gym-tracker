@@ -49,7 +49,7 @@ function render() {
 }
 
 function showLogin() {
-  if (loginShown) return; // a background sync attempt must not wipe what she is typing
+  if (loginShown) return; // a background sync attempt must not wipe what the user is typing
   loginShown = true;
   signedIn = false;
   tabsEl.hidden = true;

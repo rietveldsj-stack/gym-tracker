@@ -6,22 +6,22 @@ Status: Draft, awaiting review
 ## 1. Purpose and context
 
 A personal gym tracker for a single user, used on an iPhone at the gym,
-one-handed, between sets. She saves the web app to her home screen from Safari.
+one-handed, between sets. The user saves the web app to the home screen from Safari.
 
-**What she can do:**
+**What the user can do:**
 - Keep a list of exercises (name + muscle group).
 - Start a workout session dated today and log sets (exercise, weight, reps, warmup/work).
 - End the session and see how long it took.
 - Look back at past sessions.
-- See her progress per exercise in charts, and weekly training stats.
-- Get "New PR!" feedback when she beats a personal record.
-- Use a rest timer between sets that can alert her on the lock screen.
+- See progress per exercise in charts, and weekly training stats.
+- Get "New PR!" feedback when they beat a personal record.
+- Use a rest timer between sets that can alert them on the lock screen.
 
 **Success criteria:**
 - Logging a set takes at most a few taps, and the weight/reps are prefilled.
-- Nothing she logs is lost, even with poor or no signal in the gym.
-- It feels like an app on her home screen: full-screen, own icon, opens offline.
-- She sees the workout duration when she ends a session, and a live timer while it is running.
+- Nothing the user logs is lost, even with poor or no signal in the gym.
+- It feels like an app on the home screen: full-screen, own icon, opens offline.
+- The user sees the workout duration when they end a session, and a live timer while it is running.
 - Saving a set starts the rest timer automatically, and the lock-screen alert arrives when the rest is over.
 
 **Constraints:**
@@ -136,7 +136,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 | `PUT /api/sets/{id}` | `{sessionId, exerciseId, weightKg, reps, type, loggedAt}` | Creates or updates the set. `200` |
 | `DELETE /api/sets/{id}` | — | `204`. Deleting a set that no longer exists is fine |
 | `GET /api/exercises/{id}/stats` | — | `{records, sessions: [{date, maxWeightKg, est1rmKg}]}` for the exercise detail screen (§5) |
-| `GET /api/stats/weekly?weeks=12&today=YYYY-MM-DD` | — | `[{weekStart, workouts, workSetsByMuscle: {QUADS: 12, …}}]`, oldest first, including weeks with zero. `weeks` is 1–52, default 12. `today` is the phone's local date (defaults to the server's date), so week boundaries follow her time zone |
+| `GET /api/stats/weekly?weeks=12&today=YYYY-MM-DD` | — | `[{weekStart, workouts, workSetsByMuscle: {QUADS: 12, …}}]`, oldest first, including weeks with zero. `weeks` is 1–52, default 12. `today` is the phone's local date (defaults to the server's date), so week boundaries follow the phone's time zone |
 | `GET /api/push/public-key` | — | `{publicKey}`: the VAPID public key the phone needs to register for notifications |
 | `PUT /api/push/subscription` | `{endpoint, keys: {p256dh, auth}}` | Saves or updates the device's registration. `200` |
 | `PUT /api/rest-timer` | `{endsAt}` | Schedules the lock-screen alert, replacing any earlier one. `endsAt` must be in the future and at most 1 hour away, otherwise `400`. `204` |
@@ -158,7 +158,7 @@ All requests and responses are JSON. Create and update share the same `PUT` requ
 ### Modules (`static/js/`)
 - **`api.js`:** a `fetch` wrapper. It attaches the CSRF token from the `XSRF-TOKEN` cookie and maps responses to *ok*, *network error*, *rejected (4xx)* or *unauthorized (401)*.
 - **`store.js`:**
-  - Holds the last **server snapshot** (exercises with records, open session, history summaries, weekly stats, and per-exercise stats for each exercise she has viewed) and the **outbox** of pending operations. Both are saved in `localStorage`.
+  - Holds the last **server snapshot** (exercises with records, open session, history summaries, weekly stats, and per-exercise stats for each exercise the user has viewed) and the **outbox** of pending operations. Both are saved in `localStorage`.
   - Exposes `view()`, which is the snapshot with the pending operations applied on top. All screens render from `view()`.
 - **`sync.js`:**
   - Sends the outbox in order, one operation at a time.
@@ -256,12 +256,12 @@ Only **work** sets from **ended** sessions count, unless stated otherwise.
 
 An exercise's `records` (included in `GET /api/exercises` and `GET /api/exercises/{id}/stats`):
 - **`heaviest`:** `{weightKg, reps, date}`, the work set with the highest weight above 0. A tie on weight goes to more reps, then the earliest date. Null if there is none.
-- **`repRecords`:** `[{weightKg, reps, date}]`, one entry per weight she has lifted, including 0 kg (bodyweight). Each holds the most reps at that weight and the earliest date it was reached. Sorted by weight, highest first.
+- **`repRecords`:** `[{weightKg, reps, date}]`, one entry per weight the user has lifted, including 0 kg (bodyweight). Each holds the most reps at that weight and the earliest date it was reached. Sorted by weight, highest first.
 
 **PRs during a workout** (`records.js`, runs on the phone so it works offline):
 - Work sets in the open session are checked in `loggedAt` order. "Before" means the stored records plus the earlier work sets of this session.
 - **Heaviest-weight PR:** the weight is above 0, the exercise has at least one earlier work set, and the weight is higher than every earlier weight.
-- **Rep PR:** she has done this exact weight before, and the reps are higher than the earlier best at that weight.
+- **Rep PR:** the user has done this exact weight before, and the reps are higher than the earlier best at that weight.
 - **Never a PR:** the first set ever of an exercise, the first set ever at a particular weight (unless it's a heaviest-weight PR), and warmup sets.
 - Flags are recalculated whenever the session's sets change, so editing or deleting a set updates the 🏆 marks. The toast only appears when saving a new set or an edited one.
 
@@ -281,17 +281,17 @@ An exercise's `records` (included in `GET /api/exercises` and `GET /api/exercise
 
 ### Rest timer
 **In-app (`rest.js`):**
-- **Start:** saving any set (warmup or work) starts or restarts the rest if auto-start is on. Otherwise she taps **Start rest**.
+- **Start:** saving any set (warmup or work) starts or restarts the rest if auto-start is on. Otherwise the user taps **Start rest**.
 - **Duration:** taken from Settings (default 90 s).
 - **State:** `endsAt` is saved in `localStorage`, so the countdown survives the app being closed and reopened.
 - **Rest bar:** shows the time left as `M:SS` with a progress bar, **−15 s**, **+15 s** and **Skip**. ±15 s shifts `endsAt`.
 - **Reaching zero:**
-  - a short beep through the Web Audio API (the audio is unlocked by her taps in the app);
+  - a short beep through the Web Audio API (the audio is unlocked by the user's taps in the app);
   - the bar shows "Rest over" for 5 s, then hides.
 - **Ending or discarding the session** stops the rest.
 
 **Lock-screen alert:**
-- **Enabling** (from Settings; needs her tap):
+- **Enabling** (from Settings; needs a tap from the user):
   1. Check that the app runs from the home screen (`navigator.standalone`) and that `PushManager` exists. If not, show "Add the app to your Home Screen first (iOS 16.4 or later)".
   2. `Notification.requestPermission()`.
   3. `GET /api/push/public-key`, then `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})`.
@@ -319,7 +319,7 @@ An exercise's `records` (included in `GET /api/exercises` and `GET /api/exercise
 - **Remember me:**
   - Uses Spring's database-backed remember-me tokens (`PersistentTokenBasedRememberMeServices` with a `persistent_logins` table created by a Flyway migration), keyed with `REMEMBER_ME_KEY`.
   - Always on, valid for 365 days. Cookies are `Secure` and `HttpOnly`.
-  - The database-backed version is required. Spring's simpler hash-based cookie is signed using the stored password hash, and because the password is re-hashed with a new salt on every start, every deploy would sign her out.
+  - The database-backed version is required. Spring's simpler hash-based cookie is signed using the stored password hash, and because the password is re-hashed with a new salt on every start, every deploy would sign the user out.
 - **CSRF protection:**
   - Enabled, using `CookieCsrfTokenRepository.withHttpOnlyFalse()` and the SPA request handler.
   - `api.js` reads the cookie value at the moment it sends each request.
@@ -370,7 +370,7 @@ An exercise's `records` (included in `GET /api/exercises` and `GET /api/exercise
 
 **JavaScript unit tests** for `records.js`, `format.js` and the store's `applyOps`: run in the same WebKit browser through a small test page (`/test/unit.html`, only included in tests), covering the PR rules above, weight parsing and the offline view.
 
-**Manual on her iPhone:**
+**Manual on the iPhone:**
 - Add to Home Screen.
 - Full-screen launch.
 - Log a set in airplane mode, then turn signal back on and check it syncs.
