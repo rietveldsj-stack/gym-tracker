@@ -22,7 +22,7 @@ class PushApiTest extends IntegrationTestBase {
 
     @AfterEach
     void reset() {
-        restTimer.cancel();
+        restTimer.cancelAll();
         pushSender.reset();
     }
 
@@ -125,5 +125,57 @@ class PushApiTest extends IntegrationTestBase {
                 Duration.ofSeconds(2));
         assertThat(jdbc.queryForObject("select endpoint from push_subscription", String.class))
                 .isEqualTo("https://push.example/new");
+    }
+
+    @Test
+    void alertGoesOnlyToTheOwnersPhones() throws Exception {
+        subscribe("https://push.example/mine", "key", "auth");
+        createUser("other@example.com");
+        actingAs = "other@example.com";
+        subscribe("https://push.example/theirs", "key", "auth");
+        actingAs = com.gymtracker.TestUsers.EMAIL;
+        scheduleIn(Duration.ofSeconds(1));
+        waitFor(() -> pushSender.sent().size() == 1, Duration.ofSeconds(5));
+        Thread.sleep(300);
+        assertThat(pushSender.sent()).containsExactly("https://push.example/mine");
+    }
+
+    @Test
+    void accountsHaveTheirOwnTimers() throws Exception {
+        subscribe("https://push.example/mine", "key", "auth");
+        scheduleIn(Duration.ofSeconds(1));
+        createUser("other@example.com");
+        actingAs = "other@example.com";
+        apiDelete("/api/rest-timer").andExpect(status().isNoContent()); // cancels only their own timer
+        waitFor(() -> pushSender.sent().contains("https://push.example/mine"), Duration.ofSeconds(5));
+    }
+
+    @Test
+    void subscribingFromAnotherAccountMovesThePhone() throws Exception {
+        subscribe("https://push.example/shared", "key", "auth");
+        java.util.UUID other = createUser("other@example.com");
+        actingAs = "other@example.com";
+        subscribe("https://push.example/shared", "key", "auth");
+        assertThat(jdbc.queryForObject("select user_id from push_subscription", java.util.UUID.class)).isEqualTo(other);
+    }
+
+    @Test
+    void unsubscribeRemovesOnlyTheCallersSubscription() throws Exception {
+        subscribe("https://push.example/mine", "key", "auth");
+        createUser("other@example.com");
+        actingAs = "other@example.com";
+        unsubscribe("https://push.example/mine");
+        assertThat(jdbc.queryForObject("select count(*) from push_subscription", Integer.class)).isEqualTo(1);
+        actingAs = com.gymtracker.TestUsers.EMAIL;
+        unsubscribe("https://push.example/mine");
+        unsubscribe("https://push.example/mine"); // already gone: still fine
+        assertThat(jdbc.queryForObject("select count(*) from push_subscription", Integer.class)).isZero();
+    }
+
+    private void unsubscribe(String endpoint) throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/push/subscription")
+                        .with(signedIn()).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"endpoint\": \"%s\"}".formatted(endpoint)))
+                .andExpect(status().isNoContent());
     }
 }

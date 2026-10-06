@@ -25,8 +25,12 @@ public class PushSubscriptionService {
     }
 
     @Transactional(readOnly = true)
-    public List<PushSubscription> all() {
-        return repository.findAll();
+    public List<PushSubscription> forUser(UUID userId) {
+        return repository.findByUserId(userId);
+    }
+
+    public void removeForUser(UUID userId, String endpoint) {
+        repository.findById(endpoint).filter(s -> s.getUserId().equals(userId)).ifPresent(repository::delete);
     }
 
     public void remove(String endpoint) {

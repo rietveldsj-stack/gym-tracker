@@ -30,6 +30,9 @@ class PushController {
     record RestTimerRequest(@NotNull Instant endsAt) {
     }
 
+    record UnsubscribeRequest(@NotBlank @Size(max = 2048) String endpoint) {
+    }
+
     private final String publicKey;
     private final PushSubscriptionService subscriptions;
     private final RestTimerService restTimer;
@@ -53,15 +56,21 @@ class PushController {
         subscriptions.save(currentUser.id(), request.endpoint(), request.keys().p256dh(), request.keys().auth());
     }
 
+    @DeleteMapping("/push/subscription")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void unsubscribe(@Valid @RequestBody UnsubscribeRequest request) {
+        subscriptions.removeForUser(currentUser.id(), request.endpoint());
+    }
+
     @PutMapping("/rest-timer")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void schedule(@Valid @RequestBody RestTimerRequest request) {
-        restTimer.schedule(request.endsAt());
+        restTimer.schedule(currentUser.id(), request.endsAt());
     }
 
     @DeleteMapping("/rest-timer")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void cancel() {
-        restTimer.cancel();
+        restTimer.cancel(currentUser.id());
     }
 }
