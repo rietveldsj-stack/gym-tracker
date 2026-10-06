@@ -1,5 +1,5 @@
 import { request } from './api.js';
-import { updatePrefs } from './prefs.js';
+import { getPrefs, updatePrefs } from './prefs.js';
 
 function isStandalone() {
   return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
@@ -55,6 +55,29 @@ export async function disableAlerts() {
     }
   } catch {
     // the server forgets dead subscriptions on its own when a push fails
+  }
+  updatePrefs({ alertsEnabled: false });
+}
+
+/**
+ * After another account signs in on this phone (or after the upgrade to accounts emptied the server's list):
+ * re-registers this phone's alerts for the signed-in account, or shows "Enable" again when there is nothing to
+ * re-register. Best effort: never throws.
+ */
+export async function refreshAlerts() {
+  if (!getPrefs().alertsEnabled) return;
+  try {
+    if (pushSupported()) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        const { endpoint, keys } = subscription.toJSON();
+        const saved = await request('PUT', '/api/push/subscription', { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } });
+        if (saved.kind === 'ok') return;
+      }
+    }
+  } catch {
+    // fall through: alerts are off until the user enables them again
   }
   updatePrefs({ alertsEnabled: false });
 }

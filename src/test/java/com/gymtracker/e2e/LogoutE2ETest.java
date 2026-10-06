@@ -76,4 +76,17 @@ class LogoutE2ETest extends E2ETestBase {
         assertThat(page.getByLabel("Email")).hasCount(0);
         Assertions.assertThat(count("select count(*) from persistent_logins")).isEqualTo(1);
     }
+
+    @Test
+    void refusedLogoutKeepsYouSignedIn() {
+        // The server refuses the logout (e.g. a rejected CSRF token). page.route can't do this: the service worker
+        // sits in between, so the page's fetch is replaced instead.
+        page.addInitScript("const realFetch = window.fetch; window.fetch = (url, options) => String(url).endsWith('/logout') "
+                + "? Promise.resolve(new Response('', { status: 403 })) : realFetch(url, options);");
+        signIn();
+        openLogout();
+        button("Log out").click();
+        assertThat(page.getByText("Could not log out. Try again.")).isVisible();
+        assertThat(page.getByLabel("Email")).hasCount(0);
+    }
 }

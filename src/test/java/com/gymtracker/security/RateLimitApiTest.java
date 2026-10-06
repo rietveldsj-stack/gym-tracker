@@ -49,4 +49,26 @@ class RateLimitApiTest extends IntegrationTestBase {
             result.andExpect(i < 10 ? status().isForbidden() : status().isTooManyRequests());
         }
     }
+
+    @Test
+    void encodedPathIsCountedToo() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            wrongLogin().andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post(java.net.URI.create("/%6cogin")).with(xsrf()).contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("username", TestUsers.EMAIL).param("password", "guess"))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void forwardedHeadersCannotPickANewClientAddress() throws Exception {
+        for (int i = 0; i < 11; i++) {
+            ResultActions result = mvc.perform(post("/login").with(xsrf())
+                    .header("Forwarded", "for=198.51.100." + i)
+                    .header("X-Forwarded-For", "203.0.113." + i)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .param("username", TestUsers.EMAIL).param("password", "guess"));
+            result.andExpect(i < 10 ? status().isUnauthorized() : status().isTooManyRequests());
+        }
+    }
 }

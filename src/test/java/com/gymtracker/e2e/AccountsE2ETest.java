@@ -98,4 +98,32 @@ class AccountsE2ETest extends E2ETestBase {
         assertThat(page.getByText("No exercises yet")).isVisible();
         Assertions.assertThat(count("select count(*) from exercise")).isZero();
     }
+
+    @Test
+    void alertsThatNoLongerExistShowEnableAgain() {
+        page.navigate("/");
+        // The phone had alerts on, but the server no longer has its subscription (the upgrade emptied the table).
+        page.evaluate("() => localStorage.setItem('gt.prefs.v1', JSON.stringify({ alertsEnabled: true }))");
+        signIn();
+        tab("Workout").click();
+        page.getByLabel("Settings").click();
+        assertThat(button("Enable")).isVisible();
+    }
+
+    @Test
+    void alertsOfThisPhoneMoveToTheSignedInAccount() {
+        page.addInitScript("""
+                window.PushManager = window.PushManager || function () {};
+                window.Notification = window.Notification || function () {};
+                const subscription = { endpoint: 'https://push.example/this-phone',
+                  toJSON: () => ({ endpoint: 'https://push.example/this-phone', keys: { p256dh: 'key', auth: 'auth' } }) };
+                navigator.serviceWorker.getRegistration = async () => ({ pushManager: { getSubscription: async () => subscription } });
+                """);
+        page.navigate("/");
+        page.evaluate("() => localStorage.setItem('gt.prefs.v1', JSON.stringify({ alertsEnabled: true }))");
+        signIn();
+        page.waitForCondition(() -> count("select count(*) from push_subscription") == 1);
+        Assertions.assertThat(jdbc.queryForObject("select user_id from push_subscription", java.util.UUID.class))
+                .isEqualTo(testerId);
+    }
 }

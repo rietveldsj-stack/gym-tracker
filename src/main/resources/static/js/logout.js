@@ -21,6 +21,7 @@ export async function logout() {
   await disableAlerts();
   const result = await request('POST', '/logout');
   if (result.kind === 'network') return { ok: false, message: OFFLINE };
+  if (result.kind !== 'ok') return { ok: false, message: 'Could not log out. Try again.' };
   signedOutHandler(); // shows the sign-in screen first, so wiping the data below doesn't redraw the app
   forgetAccount();
   return { ok: true };

@@ -1,4 +1,5 @@
 import * as store from './store.js';
+import { refreshAlerts } from './push.js';
 
 // The data on this phone belongs to one account and is tagged with its email. When another account signs in, or
 // the data has no tag (it is from before accounts existed), the data is wiped first: accounts never mix.
@@ -22,6 +23,7 @@ export function useAccount(email) {
   } catch {
     // Storage blocked: the data only lives in memory anyway.
   }
+  refreshAlerts(); // this phone's alerts now belong to this account
 }
 
 /** After logging out: nothing of the account stays on the phone. */
