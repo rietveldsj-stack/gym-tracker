@@ -1,5 +1,6 @@
 package com.gymtracker.push;
 
+import com.gymtracker.account.CurrentUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,12 +33,14 @@ class PushController {
     private final String publicKey;
     private final PushSubscriptionService subscriptions;
     private final RestTimerService restTimer;
+    private final CurrentUser currentUser;
 
     PushController(@Value("${app.vapid.public-key}") String publicKey, PushSubscriptionService subscriptions,
-                   RestTimerService restTimer) {
+                   RestTimerService restTimer, CurrentUser currentUser) {
         this.publicKey = publicKey;
         this.subscriptions = subscriptions;
         this.restTimer = restTimer;
+        this.currentUser = currentUser;
     }
 
     @GetMapping("/push/public-key")
@@ -47,7 +50,7 @@ class PushController {
 
     @PutMapping("/push/subscription")
     void subscribe(@Valid @RequestBody SubscriptionRequest request) {
-        subscriptions.save(request.endpoint(), request.keys().p256dh(), request.keys().auth());
+        subscriptions.save(currentUser.id(), request.endpoint(), request.keys().p256dh(), request.keys().auth());
     }
 
     @PutMapping("/rest-timer")

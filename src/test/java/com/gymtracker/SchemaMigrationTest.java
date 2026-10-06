@@ -19,27 +19,32 @@ class SchemaMigrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void allowsOnlyOneOpenSession() {
-        insertSession(null);
-        insertSession("2026-10-05T09:00:00Z");
-        assertThatThrownBy(() -> insertSession(null)).isInstanceOf(DataIntegrityViolationException.class);
+    void allowsOneOpenSessionPerAccount() {
+        UUID other = createUser("other@example.com");
+        insertSession(testerId, null);
+        insertSession(testerId, "2026-10-05T09:00:00Z");
+        insertSession(other, null);
+        assertThatThrownBy(() -> insertSession(testerId, null)).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    void exerciseNamesAreUniqueIgnoringCaseAmongActiveOnly() {
-        insertExercise("Squat", true);
-        insertExercise("Squat", false);
-        assertThatThrownBy(() -> insertExercise("squat", false)).isInstanceOf(DataIntegrityViolationException.class);
+    void exerciseNamesAreUniquePerAccountIgnoringCaseAmongActiveOnly() {
+        UUID other = createUser("other@example.com");
+        insertExercise(testerId, "Squat", true);
+        insertExercise(testerId, "Squat", false);
+        insertExercise(other, "Squat", false);
+        assertThatThrownBy(() -> insertExercise(testerId, "squat", false))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    private void insertSession(String endedAt) {
-        jdbc.update("insert into workout_session (id, session_date, started_at, ended_at) "
-                + "values (?, date '2026-10-05', timestamptz '2026-10-05T08:00:00Z', ?::timestamptz)",
-                UUID.randomUUID(), endedAt);
+    private void insertSession(UUID userId, String endedAt) {
+        jdbc.update("insert into workout_session (id, user_id, session_date, started_at, ended_at) "
+                + "values (?, ?, date '2026-10-05', timestamptz '2026-10-05T08:00:00Z', ?::timestamptz)",
+                UUID.randomUUID(), userId, endedAt);
     }
 
-    private void insertExercise(String name, boolean archived) {
-        jdbc.update("insert into exercise (id, name, muscle_group, archived, created_at) values (?, ?, 'QUADS', ?, now())",
-                UUID.randomUUID(), name, archived);
+    private void insertExercise(UUID userId, String name, boolean archived) {
+        jdbc.update("insert into exercise (id, user_id, name, muscle_group, archived, created_at) "
+                + "values (?, ?, ?, 'QUADS', ?, now())", UUID.randomUUID(), userId, name, archived);
     }
 }

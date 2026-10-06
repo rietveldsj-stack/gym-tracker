@@ -15,6 +15,9 @@ public class WorkoutSession {
     @Id
     private UUID id;
 
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
     @Column(name = "session_date", nullable = false)
     private LocalDate date;
 
@@ -27,10 +30,15 @@ public class WorkoutSession {
     protected WorkoutSession() {
     }
 
-    public WorkoutSession(UUID id, LocalDate date, Instant startedAt) {
+    public WorkoutSession(UUID id, UUID userId, LocalDate date, Instant startedAt) {
         this.id = id;
+        this.userId = userId;
         this.date = date;
         this.startedAt = startedAt;
+    }
+
+    public boolean isOwnedBy(UUID userId) {
+        return this.userId.equals(userId);
     }
 
     public void end(Instant endedAt) {

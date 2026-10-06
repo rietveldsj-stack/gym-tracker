@@ -1,5 +1,6 @@
 package com.gymtracker.stats;
 
+import com.gymtracker.account.CurrentUser;
 import com.gymtracker.common.BadRequestException;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -16,15 +17,17 @@ class StatsController {
 
     private final StatsService stats;
     private final Clock clock;
+    private final CurrentUser currentUser;
 
-    StatsController(StatsService stats, Clock clock) {
+    StatsController(StatsService stats, Clock clock, CurrentUser currentUser) {
         this.stats = stats;
         this.clock = clock;
+        this.currentUser = currentUser;
     }
 
     @GetMapping("/api/exercises/{id}/stats")
     ExerciseStats exerciseStats(@PathVariable UUID id) {
-        return stats.exerciseStats(id);
+        return stats.exerciseStats(currentUser.id(), id);
     }
 
     @GetMapping("/api/stats/weekly")
@@ -33,6 +36,6 @@ class StatsController {
         if (weeks < 1 || weeks > 52) {
             throw new BadRequestException("weeks must be between 1 and 52");
         }
-        return stats.weekly(weeks, today != null ? today : LocalDate.now(clock));
+        return stats.weekly(currentUser.id(), weeks, today != null ? today : LocalDate.now(clock));
     }
 }

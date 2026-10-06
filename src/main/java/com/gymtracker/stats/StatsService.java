@@ -36,38 +36,38 @@ public class StatsService {
         this.exercises = exercises;
     }
 
-    public Map<UUID, ExerciseHistory> historyByExercise() {
+    public Map<UUID, ExerciseHistory> historyByExercise(UUID userId) {
         Map<UUID, ExerciseHistory> result = new HashMap<>();
-        sets.findEndedWorkSets().stream()
+        sets.findEndedWorkSets(userId).stream()
                 .collect(groupingBy(WorkSetRow::exerciseId))
                 .forEach((exerciseId, rows) -> result.put(exerciseId, ExerciseHistory.of(rows)));
         return result;
     }
 
-    public ExerciseHistory historyFor(UUID exerciseId) {
-        return ExerciseHistory.of(sets.findEndedWorkSetsForExercise(exerciseId));
+    public ExerciseHistory historyFor(UUID userId, UUID exerciseId) {
+        return ExerciseHistory.of(sets.findEndedWorkSetsForExercise(userId, exerciseId));
     }
 
-    public ExerciseStats exerciseStats(UUID exerciseId) {
-        if (!exercises.existsById(exerciseId)) {
+    public ExerciseStats exerciseStats(UUID userId, UUID exerciseId) {
+        if (!exercises.existsByIdAndUserId(exerciseId, userId)) {
             throw new NotFoundException("Exercise not found");
         }
-        List<WorkSetRow> rows = sets.findEndedWorkSetsForExercise(exerciseId);
+        List<WorkSetRow> rows = sets.findEndedWorkSetsForExercise(userId, exerciseId);
         return new ExerciseStats(RecordsCalculator.records(rows), RecordsCalculator.sessionPoints(rows));
     }
 
     /** The {@code weeks} Monday-to-Sunday weeks ending with the week that contains {@code today}, oldest first. */
-    public List<WeekStats> weekly(int weeks, LocalDate today) {
+    public List<WeekStats> weekly(UUID userId, int weeks, LocalDate today) {
         LocalDate thisWeek = weekStart(today);
         LocalDate from = thisWeek.minusWeeks(weeks - 1L);
         LocalDate to = thisWeek.plusDays(6);
 
         Map<LocalDate, Integer> workouts = new HashMap<>();
-        for (WorkoutSession session : sessions.findByEndedAtIsNotNullAndDateBetween(from, to)) {
+        for (WorkoutSession session : sessions.findByUserIdAndEndedAtIsNotNullAndDateBetween(userId, from, to)) {
             workouts.merge(weekStart(session.getDate()), 1, Integer::sum);
         }
         Map<LocalDate, Map<MuscleGroup, Integer>> muscles = new HashMap<>();
-        for (WeeklySetRow row : sets.findEndedWorkSetMuscles(from, to)) {
+        for (WeeklySetRow row : sets.findEndedWorkSetMuscles(userId, from, to)) {
             muscles.computeIfAbsent(weekStart(row.date()), week -> new EnumMap<>(MuscleGroup.class))
                     .merge(row.muscleGroup(), 1, Integer::sum);
         }

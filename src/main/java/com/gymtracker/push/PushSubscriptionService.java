@@ -2,6 +2,7 @@ package com.gymtracker.push;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +18,10 @@ public class PushSubscriptionService {
         this.clock = clock;
     }
 
-    public void save(String endpoint, String p256dh, String auth) {
+    public void save(UUID userId, String endpoint, String p256dh, String auth) {
         repository.findById(endpoint).ifPresentOrElse(
-                existing -> existing.updateKeys(p256dh, auth),
-                () -> repository.save(new PushSubscription(endpoint, p256dh, auth, clock.instant())));
+                existing -> existing.assignTo(userId, p256dh, auth),
+                () -> repository.save(new PushSubscription(endpoint, userId, p256dh, auth, clock.instant())));
     }
 
     @Transactional(readOnly = true)

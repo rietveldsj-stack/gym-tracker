@@ -24,6 +24,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
+    @ExceptionHandler(NotSignedInException.class)
+    ResponseEntity<ApiError> notSignedIn(NotSignedInException e) {
+        return error(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
     @ExceptionHandler(ConflictException.class)
     ResponseEntity<ApiError> conflict(ConflictException e) {
         return error(HttpStatus.CONFLICT, e.getMessage());

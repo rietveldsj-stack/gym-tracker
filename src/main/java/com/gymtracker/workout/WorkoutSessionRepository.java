@@ -8,9 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, UUID> {
 
-    Optional<WorkoutSession> findFirstByEndedAtIsNull();
+    Optional<WorkoutSession> findByIdAndUserId(UUID id, UUID userId);
 
-    List<WorkoutSession> findByEndedAtIsNotNullOrderByStartedAtDesc();
+    Optional<WorkoutSession> findFirstByUserIdAndEndedAtIsNull(UUID userId);
 
-    List<WorkoutSession> findByEndedAtIsNotNullAndDateBetween(LocalDate from, LocalDate to);
+    List<WorkoutSession> findByUserIdAndEndedAtIsNotNullOrderByStartedAtDesc(UUID userId);
+
+    List<WorkoutSession> findByUserIdAndEndedAtIsNotNullAndDateBetween(UUID userId, LocalDate from, LocalDate to);
 }

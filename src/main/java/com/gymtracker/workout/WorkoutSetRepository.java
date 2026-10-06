@@ -23,22 +23,22 @@ public interface WorkoutSetRepository extends JpaRepository<WorkoutSet, UUID> {
     @Query("""
             select new com.gymtracker.workout.WorkSetRow(s.exerciseId, s.sessionId, ws.date, s.weightKg, s.reps, s.loggedAt)
             from WorkoutSet s join WorkoutSession ws on ws.id = s.sessionId
-            where s.type = com.gymtracker.workout.SetType.WORK and ws.endedAt is not null""")
-    List<WorkSetRow> findEndedWorkSets();
+            where ws.userId = :userId and s.type = com.gymtracker.workout.SetType.WORK and ws.endedAt is not null""")
+    List<WorkSetRow> findEndedWorkSets(UUID userId);
 
     @Query("""
             select new com.gymtracker.workout.WorkSetRow(s.exerciseId, s.sessionId, ws.date, s.weightKg, s.reps, s.loggedAt)
             from WorkoutSet s join WorkoutSession ws on ws.id = s.sessionId
-            where s.type = com.gymtracker.workout.SetType.WORK and ws.endedAt is not null
+            where ws.userId = :userId and s.type = com.gymtracker.workout.SetType.WORK and ws.endedAt is not null
               and s.exerciseId = :exerciseId""")
-    List<WorkSetRow> findEndedWorkSetsForExercise(UUID exerciseId);
+    List<WorkSetRow> findEndedWorkSetsForExercise(UUID userId, UUID exerciseId);
 
     @Query("""
             select new com.gymtracker.workout.WeeklySetRow(ws.date, e.muscleGroup)
             from WorkoutSet s
               join WorkoutSession ws on ws.id = s.sessionId
               join com.gymtracker.exercise.Exercise e on e.id = s.exerciseId
-            where s.type = com.gymtracker.workout.SetType.WORK and ws.endedAt is not null
+            where ws.userId = :userId and s.type = com.gymtracker.workout.SetType.WORK and ws.endedAt is not null
               and ws.date between :from and :to""")
-    List<WeeklySetRow> findEndedWorkSetMuscles(LocalDate from, LocalDate to);
+    List<WeeklySetRow> findEndedWorkSetMuscles(UUID userId, LocalDate from, LocalDate to);
 }

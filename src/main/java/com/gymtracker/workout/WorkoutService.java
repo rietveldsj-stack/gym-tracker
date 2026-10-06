@@ -37,19 +37,22 @@ public class WorkoutService {
         this.exercises = exercises;
     }
 
-    public SessionResponse start(UUID id, StartSessionRequest request) {
+    public SessionResponse start(UUID userId, UUID id, StartSessionRequest request) {
         Optional<WorkoutSession> existing = sessions.findById(id);
         if (existing.isPresent()) {
+            if (!existing.get().isOwnedBy(userId)) {
+                throw new NotFoundException("Workout not found");
+            }
             return toResponse(existing.get());
         }
-        if (sessions.findFirstByEndedAtIsNull().isPresent()) {
+        if (sessions.findFirstByUserIdAndEndedAtIsNull(userId).isPresent()) {
             throw new ConflictException("Another workout is already in progress");
         }
-        return toResponse(sessions.save(new WorkoutSession(id, request.date(), request.startedAt())));
+        return toResponse(sessions.save(new WorkoutSession(id, userId, request.date(), request.startedAt())));
     }
 
-    public EndSessionResponse end(UUID id, EndSessionRequest request) {
-        Optional<WorkoutSession> found = sessions.findById(id);
+    public EndSessionResponse end(UUID userId, UUID id, EndSessionRequest request) {
+        Optional<WorkoutSession> found = sessions.findByIdAndUserId(id, userId);
         if (found.isEmpty()) {
             return EndSessionResponse.discardedResult();
         }
@@ -68,24 +71,27 @@ public class WorkoutService {
         return EndSessionResponse.ended(toResponse(session));
     }
 
-    public void discard(UUID id) {
-        sets.deleteBySessionId(id);
-        sessions.findById(id).ifPresent(sessions::delete);
+    public void discard(UUID userId, UUID id) {
+        sessions.findByIdAndUserId(id, userId).ifPresent(session -> {
+            sets.deleteBySessionId(id);
+            sessions.delete(session);
+        });
     }
 
     @Transactional(readOnly = true)
-    public Optional<SessionResponse> active() {
-        return sessions.findFirstByEndedAtIsNull().map(this::toResponse);
+    public Optional<SessionResponse> active(UUID userId) {
+        return sessions.findFirstByUserIdAndEndedAtIsNull(userId).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public SessionResponse get(UUID id) {
-        return sessions.findById(id).map(this::toResponse).orElseThrow(() -> new NotFoundException("Workout not found"));
+    public SessionResponse get(UUID userId, UUID id) {
+        return sessions.findByIdAndUserId(id, userId).map(this::toResponse)
+                .orElseThrow(() -> new NotFoundException("Workout not found"));
     }
 
     @Transactional(readOnly = true)
-    public List<SessionSummary> history() {
-        List<WorkoutSession> ended = sessions.findByEndedAtIsNotNullOrderByStartedAtDesc();
+    public List<SessionSummary> history(UUID userId) {
+        List<WorkoutSession> ended = sessions.findByUserIdAndEndedAtIsNotNullOrderByStartedAtDesc(userId);
         List<WorkoutSet> allSets = sets.findBySessionIdIn(ended.stream().map(WorkoutSession::getId).toList());
         Map<UUID, List<WorkoutSet>> setsBySession = allSets.stream().collect(groupingBy(WorkoutSet::getSessionId));
         Map<UUID, Exercise> exerciseById = exercisesFor(allSets);
@@ -102,22 +108,24 @@ public class WorkoutService {
         }).toList();
     }
 
-    public SetResponse putSet(UUID id, SetRequest request) {
+    public SetResponse putSet(UUID userId, UUID id, SetRequest request) {
         if (!isQuarterStep(request.weightKg())) {
             throw new BadRequestException("weightKg must be a multiple of 0.25");
         }
-        WorkoutSession session = sessions.findById(request.sessionId())
+        WorkoutSession session = sessions.findByIdAndUserId(request.sessionId(), userId)
                 .orElseThrow(() -> new NotFoundException("Workout not found"));
         if (session.getEndedAt() != null) {
             throw new ConflictException("This workout has already ended");
         }
-        Exercise exercise = exercises.findById(request.exerciseId())
+        Exercise exercise = exercises.findByIdAndUserId(request.exerciseId(), userId)
                 .orElseThrow(() -> new NotFoundException("Exercise not found"));
         Optional<WorkoutSet> existing = sets.findById(id);
         if (existing.isPresent()) {
             WorkoutSet set = existing.get();
             if (!set.getSessionId().equals(request.sessionId())) {
-                throw new ConflictException("This set belongs to another workout");
+                boolean mine = sessions.findByIdAndUserId(set.getSessionId(), userId).isPresent();
+                throw mine ? new ConflictException("This set belongs to another workout")
+                        : new NotFoundException("Set not found");
             }
             set.update(request.exerciseId(), request.weightKg(), request.reps(), request.type(), request.loggedAt());
             return SetResponse.of(set, exercise);
@@ -130,14 +138,13 @@ public class WorkoutService {
         return SetResponse.of(set, exercise);
     }
 
-    public void deleteSet(UUID id) {
-        sets.findById(id).ifPresent(set -> {
-            boolean ended = sessions.findById(set.getSessionId()).map(s -> s.getEndedAt() != null).orElse(false);
-            if (ended) {
+    public void deleteSet(UUID userId, UUID id) {
+        sets.findById(id).ifPresent(set -> sessions.findByIdAndUserId(set.getSessionId(), userId).ifPresent(session -> {
+            if (session.getEndedAt() != null) {
                 throw new ConflictException("This workout has already ended");
             }
             sets.delete(set);
-        });
+        }));
     }
 
     static boolean isQuarterStep(BigDecimal weight) {

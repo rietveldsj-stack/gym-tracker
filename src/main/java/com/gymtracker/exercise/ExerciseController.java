@@ -1,5 +1,6 @@
 package com.gymtracker.exercise;
 
+import com.gymtracker.account.CurrentUser;
 import com.gymtracker.stats.ExerciseHistory;
 import com.gymtracker.stats.StatsService;
 import jakarta.validation.Valid;
@@ -22,29 +23,33 @@ class ExerciseController {
 
     private final ExerciseService service;
     private final StatsService stats;
+    private final CurrentUser currentUser;
 
-    ExerciseController(ExerciseService service, StatsService stats) {
+    ExerciseController(ExerciseService service, StatsService stats, CurrentUser currentUser) {
         this.service = service;
         this.stats = stats;
+        this.currentUser = currentUser;
     }
 
     @GetMapping
     List<ExerciseResponse> list() {
-        Map<UUID, ExerciseHistory> histories = stats.historyByExercise();
-        return service.listActive().stream()
+        UUID userId = currentUser.id();
+        Map<UUID, ExerciseHistory> histories = stats.historyByExercise(userId);
+        return service.listActive(userId).stream()
                 .map(e -> ExerciseResponse.of(e, histories.getOrDefault(e.getId(), ExerciseHistory.EMPTY)))
                 .toList();
     }
 
     @PutMapping("/{id}")
     ExerciseResponse put(@PathVariable UUID id, @Valid @RequestBody ExerciseRequest request) {
-        Exercise exercise = service.upsert(id, request);
-        return ExerciseResponse.of(exercise, stats.historyFor(id));
+        UUID userId = currentUser.id();
+        Exercise exercise = service.upsert(userId, id, request);
+        return ExerciseResponse.of(exercise, stats.historyFor(userId, id));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable UUID id) {
-        service.archive(id);
+        service.archive(currentUser.id(), id);
     }
 }

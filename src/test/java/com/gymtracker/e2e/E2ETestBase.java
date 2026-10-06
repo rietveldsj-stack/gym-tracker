@@ -125,15 +125,15 @@ public abstract class E2ETestBase {
 
     protected UUID seedExercise(String name, String muscleGroup) {
         UUID id = UUID.randomUUID();
-        jdbc.update("insert into exercise (id, name, muscle_group, archived, created_at) values (?, ?, ?, false, now())",
-                id, name, muscleGroup);
+        jdbc.update("insert into exercise (id, user_id, name, muscle_group, archived, created_at) "
+                + "values (?, ?, ?, ?, false, now())", id, testerId, name, muscleGroup);
         return id;
     }
 
     protected UUID seedEndedSession(String date, String startedAt, String endedAt) {
         UUID id = UUID.randomUUID();
-        jdbc.update("insert into workout_session (id, session_date, started_at, ended_at) "
-                + "values (?, ?::date, ?::timestamptz, ?::timestamptz)", id, date, startedAt, endedAt);
+        jdbc.update("insert into workout_session (id, user_id, session_date, started_at, ended_at) "
+                + "values (?, ?, ?::date, ?::timestamptz, ?::timestamptz)", id, testerId, date, startedAt, endedAt);
         return id;
     }
 
