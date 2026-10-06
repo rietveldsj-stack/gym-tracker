@@ -42,12 +42,16 @@ public abstract class IntegrationTestBase {
     @Autowired
     protected CapturingMailSender mail;
 
+    @Autowired
+    protected com.gymtracker.security.AttemptLimiter attemptLimiter;
+
     /** The signed-in test account; tests may switch {@link #actingAs} to another account they created. */
     protected UUID testerId;
     protected String actingAs;
 
     @BeforeEach
     void cleanDatabase() {
+        attemptLimiter.reset();
         mail.reset();
         DbCleaner.clean(jdbc);
         testerId = TestUsers.insert(jdbc, TestUsers.EMAIL);

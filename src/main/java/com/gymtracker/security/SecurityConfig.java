@@ -3,6 +3,7 @@ package com.gymtracker.security;
 import com.gymtracker.account.AppUserRepository;
 import com.gymtracker.account.PasswordChangeSignOutFilter;
 import java.time.Clock;
+import java.time.Duration;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
@@ -79,6 +81,11 @@ public class SecurityConfig {
                 "/icons/**", "/js/**", "/vendor/**", "/test/**");
     }
 
+    @Bean
+    AttemptLimiter attemptLimiter(Clock clock) {
+        return new AttemptLimiter(10, Duration.ofMinutes(15), clock);
+    }
+
     /** Where form login and registration save the signed-in user. */
     @Bean
     SecurityContextRepository securityContextRepository() {
@@ -91,6 +98,7 @@ public class SecurityConfig {
                                             SecurityContextRepository securityContextRepository,
                                             Clock clock,
                                             AppUserRepository users,
+                                            AttemptLimiter attemptLimiter,
                                             RememberMeServices rememberMeServices,
                                             @Value("${app.remember-me-key}") String key) throws Exception {
         http
@@ -101,6 +109,7 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).spa())
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(new RateLimitFilter(attemptLimiter), UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new PasswordChangeSignOutFilter(users, clock), RememberMeAuthenticationFilter.class)
                 .formLogin(form -> form
                         .loginProcessingUrl("/login")

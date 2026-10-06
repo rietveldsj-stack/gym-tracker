@@ -46,6 +46,9 @@ public abstract class E2ETestBase {
     @Autowired
     protected CapturingMailSender mail;
 
+    @Autowired
+    protected com.gymtracker.security.AttemptLimiter attemptLimiter;
+
     protected BrowserContext context;
     protected Page page;
     protected final List<String> pageErrors = new ArrayList<>();
@@ -64,6 +67,7 @@ public abstract class E2ETestBase {
 
     @BeforeEach
     void openPage() {
+        attemptLimiter.reset();
         mail.reset();
         DbCleaner.clean(jdbc);
         testerId = com.gymtracker.TestUsers.insert(jdbc, com.gymtracker.TestUsers.EMAIL);
