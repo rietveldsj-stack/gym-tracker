@@ -2,10 +2,15 @@ import { openSheet } from '../ui.js';
 import { getPrefs, updatePrefs } from '../prefs.js';
 import { formatCountdown } from '../format.js';
 import { enableAlerts } from '../push.js';
+import { accountEmail } from '../account.js';
+import { logout } from '../logout.js';
+import * as store from '../store.js';
+import * as sync from '../sync.js';
+import { esc } from '../util.js';
 
 export function openSettings() {
   const prefs = getPrefs();
-  const { el } = openSheet(`
+  const { el, close } = openSheet(`
     <h2>Settings</h2>
     <div class="setting">
       <span>Rest time</span>
@@ -24,6 +29,10 @@ export function openSettings() {
       <span id="alerts-state">${prefs.alertsEnabled ? 'On' : '<button class="btn secondary small" data-action="enable-alerts">Enable</button>'}</span>
     </div>
     <p class="muted" id="alerts-message" hidden></p>
+    <div class="account">
+      <p class="muted">Signed in as ${esc(accountEmail() ?? '')}</p>
+      <button class="btn danger" data-action="logout">Log out</button>
+    </div>
     <button class="btn secondary big" data-close>Done</button>`);
   el.querySelectorAll('[data-rest]').forEach((button) => button.addEventListener('click', () => {
     const seconds = Math.min(600, Math.max(15, getPrefs().restSeconds + Number(button.dataset.rest)));
@@ -43,5 +52,43 @@ export function openSettings() {
     const message = el.querySelector('#alerts-message');
     message.textContent = result.message;
     message.hidden = false;
+  });
+  el.querySelector('[data-action="logout"]').addEventListener('click', () => {
+    close();
+    confirmLogout();
+  });
+}
+
+function confirmLogout() {
+  const waiting = store.pending();
+  const warning = waiting
+    ? `${waiting} change${waiting === 1 ? " hasn't" : "s haven't"} synced yet and will be lost.`
+    : "You'll need your email and password to sign in again.";
+  const { el, close } = openSheet(`
+    <h2>Log out?</h2>
+    <p class="confirm-text">${esc(warning)}</p>
+    <p class="error" id="logout-error" hidden></p>
+    <div class="stack">
+      ${waiting ? '<button class="btn secondary big" data-action="retry">Try again</button>' : ''}
+      <button class="btn danger big" data-action="confirm">${waiting ? 'Log out anyway' : 'Log out'}</button>
+      <button class="btn secondary big" data-close>Cancel</button>
+    </div>`);
+  el.querySelector('[data-action="retry"]')?.addEventListener('click', async () => {
+    await sync.flush();
+    close();
+    confirmLogout();
+  });
+  el.querySelector('[data-action="confirm"]').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const result = await logout();
+    if (result.ok) {
+      close();
+      return;
+    }
+    button.disabled = false;
+    const error = el.querySelector('#logout-error');
+    error.textContent = result.message;
+    error.hidden = false;
   });
 }

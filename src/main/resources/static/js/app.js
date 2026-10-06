@@ -6,6 +6,7 @@ import { toast } from './ui.js';
 import { initRest, setSessionOpen } from './rest.js';
 import { renderAuth } from './views/auth.js';
 import { accountEmail, useAccount } from './account.js';
+import { onSignedOut } from './logout.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
 import * as history from './views/history.js';
@@ -101,6 +102,7 @@ async function boot() {
   initRest();
   navigate({ tab: TABS[0].id });
   sync.onUnauthorized(() => showLogin());
+  onSignedOut(() => showLogin());
   sync.onRejected((message) => toast(message));
   store.subscribe(onStoreChange);
   sync.startSync();

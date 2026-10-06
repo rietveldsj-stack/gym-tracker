@@ -313,6 +313,8 @@ output { text-align: center; font-weight: 700; font-variant-numeric: tabular-num
 .back { padding: 0 8px; color: var(--accent); }
 
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--tap); }
+.account { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+.account p { overflow-wrap: anywhere; }
 input[type="checkbox"][role="switch"] {
   appearance: none;
   width: 51px;

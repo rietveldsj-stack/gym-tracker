@@ -15,6 +15,7 @@ const ASSETS = [
   '/js/charts.js',
   '/js/api.js',
   '/js/format.js',
+  '/js/logout.js',
   '/js/prefs.js',
   '/js/push.js',
   '/js/rest.js',

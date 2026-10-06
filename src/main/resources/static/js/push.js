@@ -41,3 +41,20 @@ export async function enableAlerts() {
   updatePrefs({ alertsEnabled: true });
   return { ok: true };
 }
+
+/** Stops this phone's lock-screen alerts for the signed-in account. Best effort: never throws. */
+export async function disableAlerts() {
+  try {
+    if (pushSupported()) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        await request('DELETE', '/api/push/subscription', { endpoint: subscription.endpoint });
+        await subscription.unsubscribe();
+      }
+    }
+  } catch {
+    // the server forgets dead subscriptions on its own when a push fails
+  }
+  updatePrefs({ alertsEnabled: false });
+}
