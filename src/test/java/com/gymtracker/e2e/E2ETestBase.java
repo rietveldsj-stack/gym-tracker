@@ -4,6 +4,8 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 
 import com.gymtracker.DbCleaner;
 import com.gymtracker.TestcontainersConfiguration;
+import com.gymtracker.mail.CapturingMailSender;
+import com.gymtracker.mail.TestMailConfig;
 import com.gymtracker.push.TestPushConfig;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
@@ -29,7 +31,7 @@ import org.springframework.test.context.ActiveProfiles;
 /** Runs the real app on a random port and drives it with WebKit (Safari's engine) at iPhone size. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import({TestcontainersConfiguration.class, TestPushConfig.class})
+@Import({TestcontainersConfiguration.class, TestPushConfig.class, TestMailConfig.class})
 public abstract class E2ETestBase {
 
     private static Playwright playwright;
@@ -40,6 +42,9 @@ public abstract class E2ETestBase {
 
     @Autowired
     protected JdbcTemplate jdbc;
+
+    @Autowired
+    protected CapturingMailSender mail;
 
     protected BrowserContext context;
     protected Page page;
@@ -59,6 +64,7 @@ public abstract class E2ETestBase {
 
     @BeforeEach
     void openPage() {
+        mail.reset();
         DbCleaner.clean(jdbc);
         testerId = com.gymtracker.TestUsers.insert(jdbc, com.gymtracker.TestUsers.EMAIL);
         context = browser.newContext(new Browser.NewContextOptions()

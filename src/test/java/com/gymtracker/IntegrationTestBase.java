@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import java.util.UUID;
+import com.gymtracker.mail.CapturingMailSender;
+import com.gymtracker.mail.TestMailConfig;
 import com.gymtracker.push.TestPushConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +28,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TestcontainersConfiguration.class, TestPushConfig.class})
+@Import({TestcontainersConfiguration.class, TestPushConfig.class, TestMailConfig.class})
 public abstract class IntegrationTestBase {
 
     protected static final String XSRF = "test-xsrf-token";
@@ -37,12 +39,16 @@ public abstract class IntegrationTestBase {
     @Autowired
     protected JdbcTemplate jdbc;
 
+    @Autowired
+    protected CapturingMailSender mail;
+
     /** The signed-in test account; tests may switch {@link #actingAs} to another account they created. */
     protected UUID testerId;
     protected String actingAs;
 
     @BeforeEach
     void cleanDatabase() {
+        mail.reset();
         DbCleaner.clean(jdbc);
         testerId = TestUsers.insert(jdbc, TestUsers.EMAIL);
         actingAs = TestUsers.EMAIL;
