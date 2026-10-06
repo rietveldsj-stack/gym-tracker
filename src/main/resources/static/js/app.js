@@ -4,7 +4,8 @@ import * as sync from './sync.js';
 import { getRoute, navigate, setRenderer } from './router.js';
 import { toast } from './ui.js';
 import { initRest, setSessionOpen } from './rest.js';
-import { renderLogin } from './views/login.js';
+import { renderAuth } from './views/auth.js';
+import { accountEmail, useAccount } from './account.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
 import * as history from './views/history.js';
@@ -22,16 +23,6 @@ const tabsEl = document.getElementById('tabs');
 const syncEl = document.getElementById('syncbar');
 let signedIn = false;
 let loginShown = false;
-const KNOWN_USER_KEY = 'gt.knownUser';
-
-function knownUser() {
-  try {
-    return localStorage.getItem(KNOWN_USER_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
 function render() {
   if (!signedIn) return;
   const route = getRoute();
@@ -48,26 +39,31 @@ function render() {
   current.view.render(viewEl, route);
 }
 
-function showLogin() {
+function showLogin(options = {}) {
   if (loginShown) return; // a background sync attempt must not wipe what the user is typing
   loginShown = true;
   signedIn = false;
   tabsEl.hidden = true;
   syncEl.hidden = true;
   setSessionOpen(false);
-  renderLogin(viewEl, { onSuccess: showApp });
+  renderAuth(viewEl, { ...options, onSuccess: showApp });
 }
 
-function showApp() {
+/** Opens the app. `email` is given right after signing in; on a normal start the saved account is used. */
+function showApp(email) {
   loginShown = false;
   signedIn = true;
-  try {
-    localStorage.setItem(KNOWN_USER_KEY, '1');
-  } catch {
-    // ignore
-  }
+  if (email) useAccount(email);
   render();
   sync.flush();
+}
+
+/** A reset link opens the app at #/reset?token=…; the token is taken out of the address bar and history. */
+function takeResetToken() {
+  const match = window.location.hash.match(/^#\/reset\?token=([A-Za-z0-9_-]+)/);
+  if (!match) return null;
+  window.history.replaceState(null, '', window.location.pathname);
+  return match[1];
 }
 
 // A screen update between finger-down and finger-up replaces the button under the finger and the tap is lost,
@@ -104,17 +100,22 @@ async function boot() {
   setRenderer(render);
   initRest();
   navigate({ tab: TABS[0].id });
-  sync.onUnauthorized(showLogin);
+  sync.onUnauthorized(() => showLogin());
   sync.onRejected((message) => toast(message));
   store.subscribe(onStoreChange);
   sync.startSync();
-  if (knownUser()) {
+  const resetToken = takeResetToken();
+  if (resetToken) {
+    showLogin({ mode: 'reset', token: resetToken });
+    return;
+  }
+  if (accountEmail()) {
     showApp(); // open straight from the saved data; the sync that follows shows the login screen on a 401
     return;
   }
   const me = await request('GET', '/api/me');
-  if (me.kind === 'unauthorized') showLogin();
-  else showApp(); // signed in, or offline: work from the saved snapshot
+  if (me.kind === 'ok') showApp(me.data.email);
+  else showLogin(); // signed out, or offline with no account on this phone yet
 }
 
 boot();

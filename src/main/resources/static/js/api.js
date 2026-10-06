@@ -10,14 +10,19 @@ const TIMEOUT_MS = 10000;
 // call racing it would present the old token, trip Spring's cookie-theft check and sign the user out.
 let queue = Promise.resolve();
 
+// The sign-in forms fetch a CSRF cookie before they post, so a 403 there is the server's answer (like a wrong
+// invite code), not a missing cookie.
+const AUTH_PATHS = /^\/(login|logout|api\/auth\/)/;
+
 /**
  * Result kinds: ok | network (no connection, timeout or server error: try again later) | unauthorized (401)
- * | forbidden (403, usually a missing CSRF cookie) | rejected (other 4xx, with the server's message).
+ * | forbidden (403: a missing CSRF cookie, or the server's refusal with a message)
+ * | rejected (other 4xx, with the server's message).
  */
 export function request(method, path, body, options = {}) {
   const run = queue.then(async () => {
     let result = await send(method, path, body, options);
-    if (result.kind === 'forbidden' && method !== 'GET' && path !== '/login') {
+    if (result.kind === 'forbidden' && method !== 'GET' && !AUTH_PATHS.test(path)) {
       // Missing or stale CSRF cookie: fetch a fresh one and retry once.
       await send('GET', '/api/me');
       result = await send(method, path, body, options);
@@ -55,7 +60,7 @@ async function send(method, path, body, { form = false } = {}) {
   }
   if (response.ok) return { kind: 'ok', status: response.status, data };
   if (response.status === 401) return { kind: 'unauthorized', message: data?.message };
-  if (response.status === 403) return { kind: 'forbidden' };
+  if (response.status === 403) return { kind: 'forbidden', message: data?.message };
   if (response.status >= 400 && response.status < 500) {
     return { kind: 'rejected', status: response.status, message: data?.message || `Request failed (${response.status})` };
   }

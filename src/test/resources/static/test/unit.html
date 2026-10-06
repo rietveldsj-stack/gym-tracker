@@ -5,6 +5,7 @@
   import { parseWeight, formatSet, formatSetCount, formatDuration, formatClock, formatCountdown } from '/js/format.js';
   import { prFlags, isPr } from '/js/records.js';
   import * as store from '/js/store.js';
+  import { accountEmail, useAccount, forgetAccount } from '/js/account.js';
   const { applyOps } = store;
 
   const results = [];
@@ -135,6 +136,18 @@
   test('prFlags: order follows loggedAt, not array order', () => {
     const flags = prFlags([ws('late', 45, 5, '12'), ws('early', 40, 10, '10')], {});
     eq([isPr(flags.get('early')), flags.get('late').heaviest], [false, true]);
+  });
+
+  test('useAccount keeps the same account\'s data and wipes another account\'s', () => {
+    forgetAccount();
+    useAccount('a@example.com');
+    store.dispatch('exercise.put', { id: 'e9', name: 'Plank', muscleGroup: 'CORE' });
+    useAccount('a@example.com');
+    eq([store.pending(), store.view().exercises.length], [1, 1]);
+    useAccount('b@example.com');
+    eq([store.pending(), store.view().exercises.length, accountEmail()], [0, 0, 'b@example.com']);
+    forgetAccount();
+    eq([accountEmail(), store.pending()], [null, 0]);
   });
 
   window.__results = results;

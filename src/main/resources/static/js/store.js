@@ -88,6 +88,17 @@ export function applyServerSnapshot(patch, ackedOpIds) {
   setSnapshot(patch);
 }
 
+/** Forgets everything stored for the account: the snapshot and the changes not sent yet. */
+export function reset() {
+  snapshot = { ...EMPTY };
+  outbox = [];
+  acked = [];
+  save(SNAPSHOT_KEY, snapshot);
+  save(OUTBOX_KEY, outbox);
+  save(ACKED_KEY, acked);
+  changed();
+}
+
 export function setSnapshot(patch) {
   snapshot = { ...snapshot, ...patch };
   save(SNAPSHOT_KEY, snapshot);

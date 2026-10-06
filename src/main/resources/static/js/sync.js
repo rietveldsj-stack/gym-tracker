@@ -1,6 +1,7 @@
 import { request } from './api.js';
 import * as store from './store.js';
 import { localDateIso } from './util.js';
+import { useAccount } from './account.js';
 
 const ROUTES = {
   'exercise.put': (p) => ['PUT', `/api/exercises/${p.id}`, { name: p.name, muscleGroup: p.muscleGroup }],
@@ -65,6 +66,7 @@ async function flushOnce() {
   const me = await request('GET', '/api/me');
   if (me.kind === 'unauthorized') return signedOut();
   if (me.kind !== 'ok') return 'offline';
+  if (me.data?.email) useAccount(me.data.email); // a different account's data never gets sent or shown
   while (store.pending() > 0) {
     const result = await send(store.peek());
     if (result.kind === 'ok') {

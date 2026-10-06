@@ -340,3 +340,15 @@ input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20
 
 .login { padding-top: 20vh; }
 .login h1 { margin-bottom: 24px; }
+.login .notice { color: var(--text-secondary); margin-bottom: 16px; }
+.auth-links { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.link {
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 15px;
+  text-align: left;
+  align-self: flex-start;
+}
