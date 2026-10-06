@@ -1,5 +1,7 @@
 package com.gymtracker.security;
 
+import com.gymtracker.account.PasswordChangeSignOutFilter;
+import java.time.Clock;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +19,10 @@ import org.springframework.security.web.authentication.rememberme.JdbcTokenRepos
 import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.context.DelegatingSecurityContextRepository;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
@@ -71,19 +77,33 @@ public class SecurityConfig {
                 "/icons/**", "/js/**", "/vendor/**", "/test/**");
     }
 
+    /** Where form login and registration save the signed-in user. */
+    @Bean
+    SecurityContextRepository securityContextRepository() {
+        return new DelegatingSecurityContextRepository(
+                new RequestAttributeSecurityContextRepository(), new HttpSessionSecurityContextRepository());
+    }
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                            SecurityContextRepository securityContextRepository,
+                                            Clock clock,
                                             RememberMeServices rememberMeServices,
                                             @Value("${app.remember-me-key}") String key) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
+                .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).spa())
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .formLogin(form -> form
                         .loginProcessingUrl("/login")
-                        .successHandler((request, response, authentication) -> response.setStatus(200))
+                        .successHandler((request, response, authentication) -> {
+                            PasswordChangeSignOutFilter.markSignedIn(request, clock.instant());
+                            response.setStatus(200);
+                        })
                         .failureHandler((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/json");

@@ -29,6 +29,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    ResponseEntity<ApiError> forbidden(ForbiddenException e) {
+        return error(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
     @ExceptionHandler(ConflictException.class)
     ResponseEntity<ApiError> conflict(ConflictException e) {
         return error(HttpStatus.CONFLICT, e.getMessage());
