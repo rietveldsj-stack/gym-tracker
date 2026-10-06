@@ -1,5 +1,5 @@
 const KEY = 'gt.prefs.v1';
-const DEFAULTS = { restSeconds: 90, autoStart: true, alertsEnabled: false };
+const DEFAULTS = { restSeconds: 90, autoStart: true, alertsEnabled: false, theme: 'blue' };
 
 export function getPrefs() {
   try {

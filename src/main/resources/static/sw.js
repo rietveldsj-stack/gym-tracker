@@ -23,6 +23,7 @@ const ASSETS = [
   '/js/router.js',
   '/js/store.js',
   '/js/sync.js',
+  '/js/theme.js',
   '/js/ui.js',
   '/js/util.js',
   '/js/views/exercises.js',

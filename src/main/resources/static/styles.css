@@ -35,6 +35,41 @@
   }
 }
 
+/* Themes picked in Settings. Blue (above) is the default and follows the phone's light/dark mode; these are
+   fixed: Pink is always light, Red & black always dark. Primary buttons are filled and danger buttons are
+   text-only, so they stay apart in Red & black where both are red. */
+:root[data-theme="pink"] {
+  color-scheme: light;
+  --surface-0: #fbeef3;
+  --surface-1: #fff8fa;
+  --surface-2: #f6dde6;
+  --text-primary: #2a0f1a;
+  --text-secondary: #6b3a4e;
+  --text-muted: #80526a;
+  --border: #efd0dc;
+  --grid: #f2dbe4;
+  --accent: #c2185b;
+  --accent-text: #ffffff;
+  --series-1: #d6336c;
+  --danger: #b42318;
+}
+
+:root[data-theme="redblack"] {
+  color-scheme: dark;
+  --surface-0: #0b0b0c;
+  --surface-1: #161314;
+  --surface-2: #2a1d20;
+  --text-primary: #ffffff;
+  --text-secondary: #d9c4c7;
+  --text-muted: #a8949a;
+  --border: #3a2a2e;
+  --grid: #2b2023;
+  --accent: #d61f2c;
+  --accent-text: #ffffff;
+  --series-1: #ef4655;
+  --danger: #ff8a80;
+}
+
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
 
@@ -274,6 +309,7 @@ output { text-align: center; font-weight: 700; font-variant-numeric: tabular-num
 .segmented { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: 12px; padding: 3px; }
 .segmented button { min-height: 40px; border: 0; border-radius: 10px; background: transparent; font-weight: 600; color: var(--text-secondary); }
 .segmented button[aria-checked="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
+.segmented.three { grid-template-columns: repeat(3, 1fr); }
 
 #toast {
   position: fixed;

@@ -7,6 +7,7 @@ import { logout } from '../logout.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import { esc } from '../util.js';
+import { THEMES, setTheme } from '../theme.js';
 
 export function openSettings() {
   const prefs = getPrefs();
@@ -24,6 +25,12 @@ export function openSettings() {
       <span>Auto-start rest after each set</span>
       <input type="checkbox" role="switch" id="auto-start"${prefs.autoStart ? ' checked' : ''}>
     </label>
+    <div class="stack">
+      <span>Theme</span>
+      <div class="segmented three" role="radiogroup" aria-label="Theme">
+        ${THEMES.map((t) => `<button type="button" role="radio" data-theme-choice="${t.id}" aria-checked="${prefs.theme === t.id}">${esc(t.label)}</button>`).join('')}
+      </div>
+    </div>
     <div class="setting">
       <span>Lock-screen alerts</span>
       <span id="alerts-state">${prefs.alertsEnabled ? 'On' : '<button class="btn secondary small" data-action="enable-alerts">Enable</button>'}</span>
@@ -40,6 +47,10 @@ export function openSettings() {
     el.querySelector('#rest-seconds').textContent = formatCountdown(seconds);
   }));
   el.querySelector('#auto-start').addEventListener('change', (event) => updatePrefs({ autoStart: event.target.checked }));
+  el.querySelectorAll('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => {
+    setTheme(button.dataset.themeChoice);
+    el.querySelectorAll('[data-theme-choice]').forEach((b) => b.setAttribute('aria-checked', String(b === button)));
+  }));
   el.querySelector('[data-action="enable-alerts"]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;
     button.disabled = true;

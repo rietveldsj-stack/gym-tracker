@@ -13,6 +13,13 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <script>
+    // Applies the saved theme before the first paint, so the app never flashes the default colours.
+    try {
+      var theme = JSON.parse(localStorage.getItem('gt.prefs.v1') || '{}').theme;
+      if (theme === 'pink' || theme === 'redblack') document.documentElement.dataset.theme = theme;
+    } catch (e) { /* storage blocked: default theme */ }
+  </script>
   <link rel="stylesheet" href="/styles.css">
   <script src="/vendor/chart.umd.min.js" defer></script>
   <script type="module" src="/js/app.js"></script>

@@ -7,6 +7,7 @@ import { initRest, setSessionOpen } from './rest.js';
 import { renderAuth } from './views/auth.js';
 import { accountEmail, useAccount } from './account.js';
 import { onSignedOut } from './logout.js';
+import { applyTheme } from './theme.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
 import * as history from './views/history.js';
@@ -98,6 +99,7 @@ tabsEl.addEventListener('click', (event) => {
 
 async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  applyTheme();
   setRenderer(render);
   initRest();
   navigate({ tab: TABS[0].id });
@@ -105,6 +107,7 @@ async function boot() {
   onSignedOut(() => showLogin());
   sync.onRejected((message) => toast(message));
   store.subscribe(onStoreChange);
+  window.addEventListener('gt:theme', onStoreChange);
   sync.startSync();
   const resetToken = takeResetToken();
   if (resetToken) {
