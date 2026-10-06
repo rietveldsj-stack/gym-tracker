@@ -1,8 +1,8 @@
 # Gym Tracker
 
-A personal gym tracker: exercises, workout sessions with warmup/work sets, history, personal records,
-progress charts and a rest timer with lock-screen alerts. Spring Boot serves the API and an
-offline-capable web app that is added to the iPhone home screen from Safari.
+A gym tracker for a few people: accounts with an invite code, exercises, workout sessions with warmup/work sets,
+history, personal records, progress charts, a rest timer with lock-screen alerts, and three colour themes.
+Spring Boot serves the API and an offline-capable web app that is added to the iPhone home screen from Safari.
 
 ## Run locally
 
@@ -10,7 +10,8 @@ Needs Java 25 and Docker (for the throwaway Postgres).
 
     ./mvnw spring-boot:test-run -Dspring-boot.run.profiles=test
 
-Open http://localhost:8080 and sign in with `tester` / `secret-pass`.
+Open http://localhost:8080, tap **Create account** and use the invite code `test-invite`. Reset emails are not
+sent locally (no Brevo key); the log says so.
 
 ## Tests
 

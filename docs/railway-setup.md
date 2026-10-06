@@ -6,13 +6,22 @@ and a terminal in this project folder.
 ## 1. Make the secrets (on your Mac)
 
 ```bash
-# The app password: long and random, because the site and the code are public. Save it in your password manager.
-openssl rand -base64 18
+# The invite code people need to create an account. Share it only with people who should get an account.
+openssl rand -base64 9
 # Key that signs the "stay signed in" cookie
 openssl rand -hex 32
 # Keys for lock-screen notifications
 ./mvnw -q compile && java -cp target/classes com.gymtracker.push.VapidKeyGenerator
 ```
+
+## 1b. Set up email for password resets (Brevo)
+
+1. Create a free account at https://www.brevo.com (300 emails a day).
+2. Go to **Senders, domains & dedicated IPs**, then **Senders**, then **Add a sender**, and add the email address
+   reset emails should come from. Brevo sends that address a confirmation email: click its link.
+3. Go to **SMTP & API**, then **API keys**, then **Generate a new API key**. Copy the key (it is shown once).
+
+Reset emails come "from" that address through Brevo. Some may land in spam, which the reset screen mentions.
 
 ## 2. Create the project
 
@@ -33,8 +42,10 @@ PGPORT=${{Postgres.PGPORT}}
 PGDATABASE=${{Postgres.PGDATABASE}}
 PGUSER=${{Postgres.PGUSER}}
 PGPASSWORD=${{Postgres.PGPASSWORD}}
-APP_USERNAME=<username>
-APP_PASSWORD=<the password from step 1>
+INVITE_CODE=<the invite code from step 1>
+BREVO_API_KEY=<the API key from step 1b>
+MAIL_FROM=<the sender address you verified in step 1b>
+APP_BASE_URL=https://<your-domain>
 REMEMBER_ME_KEY=<the hex key from step 1>
 VAPID_PUBLIC_KEY=<from step 1>
 VAPID_PRIVATE_KEY=<from step 1>
@@ -42,6 +53,9 @@ VAPID_SUBJECT=mailto:<your email address>
 ```
 
 Click **Update Variables**. Railway redeploys automatically.
+
+`APP_BASE_URL` is the address from step 4's **Generate Domain**; the app doesn't start without it, so fill it in
+once the domain exists.
 
 ## 4. Service settings
 
@@ -57,7 +71,7 @@ In the service's **Settings**:
 
 ## 6. On the iPhone
 
-1. Open `https://<your-domain>` in **Safari** and sign in.
+1. Open `https://<your-domain>` in **Safari**, tap **Create account**, and use the invite code.
 2. Tap **Share**, then **Add to Home Screen**, then **Add**.
 3. Open **Gym** from the home screen (not from Safari).
 4. On the **Workout** tab, tap **⚙️**, then under **Lock-screen alerts** tap **Enable**, then **Allow**.
@@ -67,8 +81,13 @@ Then do a quick test:
 - **No signal:** turn on Airplane Mode, log a set ("1 change waiting to sync" appears), then turn Airplane Mode
   off and check the message disappears.
 
+## Upgrading from the single-user version
+
+The upgrade empties the database: the old workouts are not kept. After the deploy, open the app, tap
+**Create account** and register with the invite code. Remove the old `APP_USERNAME` and `APP_PASSWORD` variables.
+
 ## Costs and limits
 
 - **Price:** Railway's Hobby plan is about $5/month, which covers this app and its database.
 - **Restarts:** a deploy or restart drops a rest alert that is counting down at that moment.
-- **Staying signed in:** the user stays signed in for a year, through restarts.
+- **Staying signed in:** each phone stays signed in for a year, until it logs out in Settings or the password is reset.
