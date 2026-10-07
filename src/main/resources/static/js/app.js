@@ -8,16 +8,17 @@ import { renderAuth } from './views/auth.js';
 import { accountEmail, useAccount } from './account.js';
 import { onSignedOut } from './logout.js';
 import { applyTheme } from './theme.js';
+import { icon } from './icons.js';
 import * as exercises from './views/exercises.js';
 import * as workout from './views/workout.js';
 import * as history from './views/history.js';
 import * as stats from './views/stats.js';
 
 const TABS = [
-  { id: 'workout', label: 'Workout', icon: '🏋️', view: workout },
-  { id: 'exercises', label: 'Exercises', icon: '📋', view: exercises },
-  { id: 'history', label: 'History', icon: '🗓️', view: history },
-  { id: 'stats', label: 'Stats', icon: '📈', view: stats },
+  { id: 'workout', label: 'Workout', icon: 'dumbbell', view: workout },
+  { id: 'exercises', label: 'Exercises', icon: 'listChecks', view: exercises },
+  { id: 'history', label: 'History', icon: 'calendar', view: history },
+  { id: 'stats', label: 'Stats', icon: 'chart', view: stats },
 ];
 
 const viewEl = document.getElementById('view');
@@ -32,7 +33,7 @@ function render() {
   tabsEl.hidden = false;
   tabsEl.innerHTML = TABS.map((t) => `
     <button class="tab${t.id === current.id ? ' active' : ''}" data-tab="${t.id}"${t.id === current.id ? ' aria-current="page"' : ''}>
-      <span aria-hidden="true">${t.icon}</span>${t.label}
+      ${icon(t.icon)}<span>${t.label}</span>
     </button>`).join('');
   const pending = store.pending();
   syncEl.hidden = pending === 0;
@@ -96,6 +97,9 @@ tabsEl.addEventListener('click', (event) => {
   const button = event.target.closest('[data-tab]');
   if (button) navigate({ tab: button.dataset.tab });
 });
+
+// Safari on iPhone only shows :active (pressed) styles when the page listens for touches.
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

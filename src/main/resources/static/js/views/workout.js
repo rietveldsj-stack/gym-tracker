@@ -9,6 +9,7 @@ import { openExerciseForm } from './exercises.js';
 import { prFlags, isPr, recordsByExercise } from '../records.js';
 import { onSetSaved } from '../rest.js';
 import { openSettings } from './settings.js';
+import { icon } from '../icons.js';
 
 let timer = null;
 const byTime = (a, b) => Date.parse(a.loggedAt) - Date.parse(b.loggedAt);
@@ -29,7 +30,7 @@ function renderStart(container) {
     <section class="screen home">
       <header class="topbar">
         <span></span>
-        <button class="btn icon ghost" data-action="settings" aria-label="Settings">⚙️</button>
+        <button class="btn icon ghost" data-action="settings" aria-label="Settings">${icon('settings')}</button>
       </header>
       <h1 class="greeting">${esc(greeting(new Date(), store.view().name))}</h1>
       <p class="muted greeting-sub">Ready for your workout?</p>
@@ -57,7 +58,7 @@ function elapsed(session) {
 
 function setRowExtras(set, flags) {
   const warmup = set.type === 'WARMUP' ? '<span class="tag">Warmup</span>' : '';
-  const pr = isPr(flags.get(set.id)) ? '<span class="pr" aria-label="Personal record">🏆</span>' : '';
+  const pr = isPr(flags.get(set.id)) ? `<span class="pr" role="img" aria-label="Personal record">${icon('trophy', { size: 18 })}</span>` : '';
   return warmup + pr;
 }
 
@@ -76,8 +77,8 @@ function renderSession(container, session) {
           <p class="timer" id="session-timer">${elapsed(session)}</p>
         </div>
         <div class="actions">
-          <button class="btn icon ghost" data-action="menu" aria-label="More options">⋯</button>
-          <button class="btn primary" data-action="end">End</button>
+          <button class="btn icon ghost" data-action="menu" aria-label="More options">${icon('more')}</button>
+          <button class="btn ghost end" data-action="end">End</button>
         </div>
       </header>
       ${groups.map((group) => `
@@ -301,7 +302,7 @@ function renderSummary(container, summary) {
       </div>
       ${summary.prs.length ? `
         <h2>Personal records</h2>
-        <ul class="pr-list">${summary.prs.map((pr) => `<li>🏆 ${esc(pr.name)} — ${formatSet(pr.weightKg, pr.reps)} · ${pr.kind}</li>`).join('')}</ul>` : ''}
+        <ul class="pr-list">${summary.prs.map((pr) => `<li>${icon('trophy', { size: 18, className: 'icon pr-icon' })}<span>${esc(pr.name)} — ${formatSet(pr.weightKg, pr.reps)} · ${pr.kind}</span></li>`).join('')}</ul>` : ''}
       <button class="btn primary big" data-action="done">Done</button>
     </section>`;
   container.querySelector('[data-action="done"]').addEventListener('click', () => navigate({ tab: 'workout' }));

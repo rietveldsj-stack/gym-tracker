@@ -22,6 +22,7 @@ const emailField = (email = '') => `
 
 const SCREENS = {
   login: ({ notice, email }) => `
+    <img class="app-icon" src="/icons/icon-192.png" alt="" width="72" height="72">
     <h1>Gym Tracker</h1>
     ${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
     <form class="stack" novalidate>

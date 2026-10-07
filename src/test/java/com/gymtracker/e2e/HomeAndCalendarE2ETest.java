@@ -51,6 +51,14 @@ class HomeAndCalendarE2ETest extends E2ETestBase {
     }
 
     @Test
+    void controlsUseIconsNotEmoji() {
+        signIn();
+        assertThat(page.locator("#tabs svg")).hasCount(4);
+        assertThat(page.getByLabel("Settings").locator("svg")).hasCount(1);
+        Assertions.assertThat(page.locator("#tabs").innerText()).isEqualTo("Workout\nExercises\nHistory\nStats");
+    }
+
+    @Test
     void greetsWithoutANameWhenThereIsNone() {
         phoneTimeIs("2026-10-07T12:30:00Z"); // 14:30
         signIn();

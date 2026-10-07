@@ -91,6 +91,7 @@ class RestTimerE2ETest extends E2ETestBase {
     void restSurvivesReload() {
         startSessionAndLogSet();
         assertThat(restTime()).isVisible();
+        waitUntilSynced(); // a reload mid-request makes WebKit report the cancelled fetch as a page error
         page.reload();
         assertThat(restTime()).isVisible();
     }

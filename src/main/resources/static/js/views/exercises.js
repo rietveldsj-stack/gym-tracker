@@ -5,6 +5,7 @@ import { openSheet, confirmDialog, toast } from '../ui.js';
 import { esc, uuid } from '../util.js';
 import { MUSCLE_GROUPS, muscleLabel, formatSet, formatWeight, formatDate } from '../format.js';
 import { lineChart } from '../charts.js';
+import { icon } from '../icons.js';
 
 let fetchedFor = null;
 let chartMode = 'weight';
@@ -23,12 +24,12 @@ export function render(container, route = {}) {
     <section class="screen">
       <header class="topbar">
         <h1>Exercises</h1>
-        <button class="btn icon primary" data-action="add" aria-label="Add exercise">+</button>
+        <button class="btn icon primary" data-action="add" aria-label="Add exercise">${icon('plus')}</button>
       </header>
       ${groups.length ? groups.map(({ group, items }) => `
         <h2 class="group-title">${muscleLabel(group)}</h2>
         <ul class="list">
-          ${items.map((e) => `<li><button class="row" data-id="${e.id}">${esc(e.name)}</button></li>`).join('')}
+          ${items.map((e) => `<li><button class="row nav" data-id="${e.id}"><span class="row-text">${esc(e.name)}</span>${icon('chevronRight', { size: 18, className: 'icon chevron' })}</button></li>`).join('')}
         </ul>`).join('') : '<p class="empty">No exercises yet. Tap + to add your first one.</p>'}
     </section>`;
   container.querySelector('[data-action="add"]').addEventListener('click', () => openExerciseForm());

@@ -3,6 +3,7 @@ import { navigate } from '../router.js';
 import { openSheet } from '../ui.js';
 import { barChart } from '../charts.js';
 import { localDateIso } from '../util.js';
+import { icon } from '../icons.js';
 import { monthDays, addMonths, workoutsByDay } from '../calendar.js';
 import { renderDetail, resetDetailFetch } from './history.js';
 import {
@@ -63,7 +64,7 @@ function calendarHtml() {
     return `<button class="${className}" data-day="${iso}" aria-label="${label}"${todayAttr}>${day}</button>`;
   });
   return `
-    <div class="card">
+    <div class="card calendar-card">
       <div class="week-nav">
         <button data-month="-1" aria-label="Previous month"${monthIndex(shownMonth) <= monthIndex(first) ? ' disabled' : ''}>‹</button>
         <h2 id="month-title">${formatMonth(shownMonth.year, shownMonth.month)}</h2>
@@ -87,9 +88,12 @@ function openDay(iso) {
   const { el, close } = openSheet(`
     <h2>${formatLongDate(iso)}</h2>
     <ul class="list">${workouts.map((h) => `
-      <li><button class="row" data-session="${h.id}">
-        <span>${formatTime(h.startedAt)}</span>
-        <span class="row-sub">${[formatDuration(h.durationSeconds), formatSetCount(h.setCount), ...h.muscleGroups.map(muscleLabel)].join(' · ')}</span>
+      <li><button class="row nav" data-session="${h.id}">
+        <span class="row-text">
+          <span>${formatTime(h.startedAt)}</span>
+          <span class="row-sub">${[formatDuration(h.durationSeconds), formatSetCount(h.setCount), ...h.muscleGroups.map(muscleLabel)].join(' · ')}</span>
+        </span>
+        ${icon('chevronRight', { size: 18, className: 'icon chevron' })}
       </button></li>`).join('')}</ul>
     <button class="btn secondary big" data-close>Cancel</button>`);
   el.querySelectorAll('[data-session]').forEach((button) => button.addEventListener('click', () => {

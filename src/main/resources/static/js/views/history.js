@@ -2,6 +2,7 @@ import * as store from '../store.js';
 import { request } from '../api.js';
 import { getRoute, navigate } from '../router.js';
 import { esc } from '../util.js';
+import { icon } from '../icons.js';
 import { muscleLabel, formatDate, formatLongDate, formatDuration, formatSet, formatSetCount } from '../format.js';
 import { groupSets } from './workout.js';
 
@@ -24,9 +25,12 @@ export function render(container, route) {
     <section class="screen">
       <header class="topbar"><h1>History</h1></header>
       ${history.length ? `<ul class="list">${history.map((h) => `
-        <li><button class="row" data-session="${h.id}">
-          <span>${formatDate(h.date)}</span>
-          <span class="row-sub">${[formatDuration(h.durationSeconds), formatSetCount(h.setCount), ...h.muscleGroups.map(muscleLabel)].join(' · ')}</span>
+        <li><button class="row nav" data-session="${h.id}">
+          <span class="row-text">
+            <span>${formatDate(h.date)}</span>
+            <span class="row-sub">${[formatDuration(h.durationSeconds), formatSetCount(h.setCount), ...h.muscleGroups.map(muscleLabel)].join(' · ')}</span>
+          </span>
+          ${icon('chevronRight', { size: 18, className: 'icon chevron' })}
         </button></li>`).join('')}</ul>` : '<p class="empty">No workouts yet.</p>'}
     </section>`;
   container.querySelectorAll('[data-session]').forEach((button) => button.addEventListener('click', () => {

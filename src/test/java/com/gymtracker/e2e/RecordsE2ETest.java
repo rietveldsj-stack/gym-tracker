@@ -40,8 +40,8 @@ class RecordsE2ETest extends E2ETestBase {
         button("End").click();
         button("End workout").click();
         assertThat(page.locator(".pr-list li")).hasCount(2);
-        assertThat(page.locator(".pr-list li").nth(0)).hasText("🏆 Squat — 40 kg × 12 · rep record");
-        assertThat(page.locator(".pr-list li").nth(1)).hasText("🏆 Squat — 45 kg × 3 · heaviest weight");
+        assertThat(page.locator(".pr-list li").nth(0)).hasText("Squat — 40 kg × 12 · rep record");
+        assertThat(page.locator(".pr-list li").nth(1)).hasText("Squat — 45 kg × 3 · heaviest weight");
     }
 
     @Test
