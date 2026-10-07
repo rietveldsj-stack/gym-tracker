@@ -34,7 +34,13 @@ function renderStart(container) {
       </header>
       <h1 class="greeting">${esc(greeting(new Date(), store.view().name))}</h1>
       <p class="muted greeting-sub">Ready for your workout?</p>
-      <button class="btn primary huge" data-action="start">Start session</button>
+      <div class="start-wrap">
+        <button class="start-round" data-action="start" aria-label="Start session">
+          <span class="start-ring" aria-hidden="true"></span>
+          ${icon('dumbbell', { size: 34 })}
+          <span aria-hidden="true">Start</span>
+        </button>
+      </div>
     </section>`;
   container.querySelector('[data-action="start"]').addEventListener('click', () => {
     store.dispatch('session.start', { id: uuid(), date: localDateIso(), startedAt: new Date().toISOString() });

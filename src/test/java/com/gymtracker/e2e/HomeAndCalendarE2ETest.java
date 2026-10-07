@@ -44,6 +44,8 @@ class HomeAndCalendarE2ETest extends E2ETestBase {
         assertThat(page.getByText("Ready for your workout?")).isVisible();
         assertThat(button("Start session")).isVisible();
         assertThat(page.getByText("Last workout")).hasCount(0);
+        double middle = button("Start session").boundingBox().y + button("Start session").boundingBox().height / 2;
+        Assertions.assertThat(middle / 844).as("start button sits mid-screen").isBetween(0.4, 0.6);
 
         phoneTimeIs("2026-10-07T17:00:00Z"); // 19:00
         page.reload();

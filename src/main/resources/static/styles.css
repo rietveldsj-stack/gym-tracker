@@ -354,9 +354,57 @@ output { text-align: center; font-weight: 700; font-variant-numeric: tabular-num
 .back { padding: 0 8px; color: var(--accent); }
 
 /* Home screen greeting */
+.home {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom)); /* clears the tab bar */
+}
+/* A soft glow of the theme colour behind the greeting. */
+.home::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 60vh;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(130% 90% at 30% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%);
+}
 .home .greeting { font-size: 34px; line-height: 1.15; margin-top: 32px; overflow-wrap: anywhere; }
 .home .greeting-sub { font-size: 19px; margin-top: 8px; }
-.home .btn.huge { margin-top: 40px; }
+.start-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px 0; }
+.start-round {
+  position: relative;
+  width: 196px;
+  height: 196px;
+  border: 0;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 75%, white), var(--accent) 60%);
+  color: var(--accent-text);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+.start-round:active { transform: scale(0.96); opacity: 0.85; }
+.start-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  animation: start-pulse 2.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes start-pulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .start-ring { animation: none; transform: scale(1.12); opacity: 0.35; }
+}
 
 /* Stats month calendar, Monday first */
 .calendar-card { padding: 16px 8px; }
