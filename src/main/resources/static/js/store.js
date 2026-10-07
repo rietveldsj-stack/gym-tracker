@@ -6,7 +6,7 @@ import { uuid } from './util.js';
 const SNAPSHOT_KEY = 'gt.snapshot.v1';
 const OUTBOX_KEY = 'gt.outbox.v1';
 const ACKED_KEY = 'gt.acked.v1';
-const EMPTY = { exercises: [], activeSession: null, history: [], weekly: null, weeklyAsOf: null, exerciseStats: {}, sessionDetails: {} };
+const EMPTY = { name: null, exercises: [], activeSession: null, history: [], weekly: null, weeklyAsOf: null, exerciseStats: {}, sessionDetails: {} };
 
 function load(key, fallback) {
   try {
@@ -178,6 +178,9 @@ export function applyOps(state, ops) {
       case 'session.discard':
         if (state.activeSession?.id === p.id) state.activeSession = null;
         state.history = state.history.filter((h) => h.id !== p.id);
+        break;
+      case 'name.put':
+        state.name = p.name;
         break;
       default:
         break;

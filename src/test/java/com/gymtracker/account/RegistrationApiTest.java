@@ -18,9 +18,14 @@ import org.springframework.test.web.servlet.ResultActions;
 class RegistrationApiTest extends IntegrationTestBase {
 
     private ResultActions register(String email, String password, String inviteCode) throws Exception {
+        return register("Janet", email, password, inviteCode);
+    }
+
+    private ResultActions register(String name, String email, String password, String inviteCode) throws Exception {
         return mvc.perform(post("/api/auth/register").with(xsrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"email": "%s", "password": "%s", "inviteCode": "%s"}""".formatted(email, password, inviteCode)));
+                        {"name": "%s", "email": "%s", "password": "%s", "inviteCode": "%s"}"""
+                        .formatted(name, email, password, inviteCode)));
     }
 
     private int accounts() {
@@ -40,6 +45,26 @@ class RegistrationApiTest extends IntegrationTestBase {
         mvc.perform(get("/api/me").session(session)).andExpect(jsonPath("$.email").value("new@example.com"));
         assertThat(jdbc.queryForObject("select password_hash from app_user where email = 'new@example.com'", String.class))
                 .startsWith("$2").doesNotContain("long-enough");
+    }
+
+    @Test
+    void storesTheNameTrimmed() throws Exception {
+        MvcResult result = register("  Janet ", "new@example.com", "long-enough", "test-invite")
+                .andExpect(status().isCreated())
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        mvc.perform(get("/api/me").session(session)).andExpect(jsonPath("$.name").value("Janet"));
+    }
+
+    @Test
+    void nameIsRequiredAndAtMost40Characters() throws Exception {
+        register("  ", "new@example.com", "long-enough", "test-invite")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Enter your name"));
+        register("a".repeat(41), "new@example.com", "long-enough", "test-invite")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Use at most 40 characters for your name"));
+        assertThat(accounts()).isEqualTo(1);
     }
 
     @Test

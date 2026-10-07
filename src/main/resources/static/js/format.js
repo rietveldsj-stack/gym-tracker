@@ -54,6 +54,24 @@ export function formatLongDate(iso) {
   return toDate(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+/** "October 2026". */
+export function formatMonth(year, month) {
+  return new Date(year, month, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+/** "08:00", the phone's local time of an ISO timestamp. */
+export function formatTime(iso) {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** "Good morning, Janet": morning from 05:00, afternoon from 12:00, evening from 18:00 (and through the night). */
+export function greeting(now, name) {
+  const hour = now.getHours();
+  const part = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 18 ? 'afternoon' : 'evening';
+  const trimmed = String(name ?? '').trim();
+  return trimmed ? `Good ${part}, ${trimmed}` : `Good ${part}`;
+}
+
 /** Reads "42.5" or "42,5"; rounds to 0.25 kg and clamps to 0–500. Returns null when it isn't a number. */
 export function parseWeight(text) {
   const trimmed = String(text ?? '').trim().replace(',', '.');

@@ -4,6 +4,7 @@ import { localDateIso } from './util.js';
 import { useAccount } from './account.js';
 
 const ROUTES = {
+  'name.put': (p) => ['PUT', '/api/me/name', { name: p.name }],
   'exercise.put': (p) => ['PUT', `/api/exercises/${p.id}`, { name: p.name, muscleGroup: p.muscleGroup }],
   'exercise.delete': (p) => ['DELETE', `/api/exercises/${p.id}`],
   'session.start': (p) => ['PUT', `/api/sessions/${p.id}`, { date: p.date, startedAt: p.startedAt }],
@@ -45,6 +46,7 @@ async function refresh() {
   const ackedBefore = store.ackedIds();
   const results = {};
   const sources = [
+    ['me', '/api/me'],
     ['exercises', '/api/exercises'],
     ['activeSession', '/api/sessions/active'],
     ['history', '/api/sessions'],
@@ -56,7 +58,8 @@ async function refresh() {
     if (result.kind !== 'ok') return 'offline';
     results[key] = result.data;
   }
-  store.applyServerSnapshot({ ...results, weeklyAsOf: new Date().toISOString() }, ackedBefore);
+  const { me, ...rest } = results;
+  store.applyServerSnapshot({ ...rest, name: me.name ?? null, weeklyAsOf: new Date().toISOString() }, ackedBefore);
   return 'idle';
 }
 

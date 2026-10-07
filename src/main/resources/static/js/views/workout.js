@@ -3,7 +3,7 @@ import { navigate } from '../router.js';
 import { openSheet, confirmDialog, toast } from '../ui.js';
 import { esc, uuid, localDateIso } from '../util.js';
 import {
-  MUSCLE_GROUPS, muscleLabel, formatSet, formatSetCount, formatClock, formatDuration, formatDate, formatLongDate, parseWeight,
+  MUSCLE_GROUPS, muscleLabel, formatSet, formatSetCount, formatClock, formatDuration, formatDate, formatLongDate, parseWeight, greeting,
 } from '../format.js';
 import { openExerciseForm } from './exercises.js';
 import { prFlags, isPr, recordsByExercise } from '../records.js';
@@ -25,20 +25,15 @@ export function render(container, route) {
 }
 
 function renderStart(container) {
-  const last = store.view().history[0];
   container.innerHTML = `
-    <section class="screen">
+    <section class="screen home">
       <header class="topbar">
-        <h1>Workout</h1>
+        <span></span>
         <button class="btn icon ghost" data-action="settings" aria-label="Settings">⚙️</button>
       </header>
-      <p class="muted">${formatLongDate(localDateIso())}</p>
+      <h1 class="greeting">${esc(greeting(new Date(), store.view().name))}</h1>
+      <p class="muted greeting-sub">Ready for your workout?</p>
       <button class="btn primary huge" data-action="start">Start session</button>
-      ${last ? `
-        <div class="card">
-          <h2>Last workout</h2>
-          <p>${formatDate(last.date)} · ${formatDuration(last.durationSeconds)} · ${formatSetCount(last.setCount)}</p>
-        </div>` : ''}
     </section>`;
   container.querySelector('[data-action="start"]').addEventListener('click', () => {
     store.dispatch('session.start', { id: uuid(), date: localDateIso(), startedAt: new Date().toISOString() });

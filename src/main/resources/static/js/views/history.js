@@ -8,12 +8,17 @@ import { groupSets } from './workout.js';
 let fetchedFor = null;
 const failures = {};
 
+/** Leaving a workout's page: opening it again tries loading it again. */
+export function resetDetailFetch() {
+  fetchedFor = null;
+}
+
 export function render(container, route) {
   if (route.sessionId) {
     renderDetail(container, route.sessionId);
     return;
   }
-  fetchedFor = null;
+  resetDetailFetch();
   const { history } = store.view();
   container.innerHTML = `
     <section class="screen">
@@ -44,18 +49,19 @@ function setsHtml(sets) {
     </div>`).join('');
 }
 
-function renderDetail(container, id) {
+/** One workout's sets. `back` is where the back button goes: History by default, or the tab that opened it. */
+export function renderDetail(container, id, back = { label: 'History', tab: 'history' }) {
   const summary = store.view().history.find((h) => h.id === id);
   const detail = store.view().sessionDetails[id];
   const body = detail ? setsHtml(detail.sets) : `<p class="empty">${failures[id] ?? 'Loading…'}</p>`;
   container.innerHTML = `
     <section class="screen">
-      <header class="topbar"><button class="btn ghost back" data-action="back">‹ History</button></header>
+      <header class="topbar"><button class="btn ghost back" data-action="back">‹ ${back.label}</button></header>
       <h1>${summary ? formatLongDate(summary.date) : 'Workout'}</h1>
       ${summary ? `<p class="muted">${formatDuration(summary.durationSeconds)} · ${formatSetCount(summary.setCount)}</p>` : ''}
       <div id="session-detail">${body}</div>
     </section>`;
-  container.querySelector('[data-action="back"]').addEventListener('click', () => navigate({ tab: 'history' }));
+  container.querySelector('[data-action="back"]').addEventListener('click', () => navigate({ tab: back.tab }));
   if (detail || fetchedFor === id) return;
   fetchedFor = id;
   delete failures[id];

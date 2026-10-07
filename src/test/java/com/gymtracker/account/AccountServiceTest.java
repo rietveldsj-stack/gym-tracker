@@ -11,7 +11,7 @@ class AccountServiceTest {
     @Test
     void registrationIsClosedWithoutAnInviteCode() {
         AccountService service = new AccountService(null, null, Clock.systemUTC(), "  ");
-        assertThatThrownBy(() -> service.register("new@example.com", "long-enough", ""))
+        assertThatThrownBy(() -> service.register("Janet", "new@example.com", "long-enough", ""))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("Registration is closed");
     }

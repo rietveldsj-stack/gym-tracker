@@ -348,6 +348,23 @@ output { text-align: center; font-weight: 700; font-variant-numeric: tabular-num
 .week-nav button:disabled { color: var(--text-muted); }
 .back { padding: 0 8px; color: var(--accent); }
 
+/* Home screen greeting */
+.home .greeting { font-size: 34px; line-height: 1.15; margin-top: 32px; overflow-wrap: anywhere; }
+.home .greeting-sub { font-size: 19px; margin-top: 8px; }
+.home .btn.huge { margin-top: 40px; }
+
+/* Stats month calendar, Monday first */
+.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; text-align: center; }
+.cal-head { font-size: 12px; font-weight: 600; color: var(--text-muted); padding-bottom: 4px; }
+.cal-day {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; margin: 0 auto;
+  border: 2px solid transparent; border-radius: 50%;
+  font-size: 15px; font-variant-numeric: tabular-nums;
+}
+button.cal-day { padding: 0; background: var(--accent); color: var(--accent-text); font-weight: 700; }
+.cal-day.today { border-color: var(--text-primary); }
+
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--tap); }
 .account { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
 .account p { overflow-wrap: anywhere; }

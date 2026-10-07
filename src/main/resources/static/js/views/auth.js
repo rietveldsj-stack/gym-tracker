@@ -37,6 +37,9 @@ const SCREENS = {
   register: () => `
     <h1>Create account</h1>
     <form class="stack" novalidate>
+      <label class="field">Your name
+        <input name="name" autocomplete="given-name" maxlength="40" required>
+      </label>
       ${emailField()}
       ${passwordField('Password', 'new-password')}
       <label class="field">Invite code
@@ -92,7 +95,7 @@ export function renderAuth(container, { mode = 'login', token = null, notice = '
     async register() {
       await request('GET', '/api/me');
       const result = await request('POST', '/api/auth/register',
-        { email: field('email'), password: field('password'), inviteCode: field('inviteCode') });
+        { name: field('name'), email: field('email'), password: field('password'), inviteCode: field('inviteCode') });
       if (result.kind !== 'ok') return messageFor(result, 'Could not create the account');
       onSuccess(result.data.email);
       return null;

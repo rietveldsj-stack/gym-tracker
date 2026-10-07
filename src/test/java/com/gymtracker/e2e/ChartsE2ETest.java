@@ -77,7 +77,7 @@ class ChartsE2ETest extends E2ETestBase {
     }
 
     @Test
-    void statsTabShowsWeeklyCharts() {
+    void statsTabShowsSetsPerMuscleGroup() {
         UUID squat = seedExercise("Squat", "QUADS");
         UUID session = seedSession(today);
         seedSet(session, squat, "20", 10, "WARMUP", today + "T08:05:00Z");
@@ -85,11 +85,6 @@ class ChartsE2ETest extends E2ETestBase {
         seedSet(session, squat, "60", 5, "WORK", today + "T08:15:00Z");
         signIn();
         tab("Stats").click();
-
-        waitForChart("weekly-chart");
-        List<Double> perWeek = chartValues("weekly-chart");
-        Assertions.assertThat(perWeek).hasSize(12);
-        Assertions.assertThat(perWeek.getLast()).isEqualTo(1.0);
 
         assertThat(page.locator("#week-title")).hasText("This week");
         waitForChart("muscle-chart");

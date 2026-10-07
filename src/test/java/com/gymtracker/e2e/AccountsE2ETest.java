@@ -19,12 +19,14 @@ class AccountsE2ETest extends E2ETestBase {
     void createsAnAccountWithTheInviteCode() {
         page.navigate("/");
         button("Create account").click();
+        page.getByLabel("Your name").fill("Janet");
         page.getByLabel("Email").fill("new@example.com");
         fillPassword("Password", "long-enough");
         page.getByLabel("Invite code").fill("test-invite");
         button("Create account").click();
         assertThat(page.locator("#tabs")).isVisible();
         waitUntilSynced();
+        assertThat(page.locator("h1")).containsText(", Janet");
         Assertions.assertThat(count("select count(*) from app_user where email = 'new@example.com'")).isEqualTo(1);
     }
 
@@ -32,6 +34,7 @@ class AccountsE2ETest extends E2ETestBase {
     void wrongInviteCodeShowsTheServersMessage() {
         page.navigate("/");
         button("Create account").click();
+        page.getByLabel("Your name").fill("Janet");
         page.getByLabel("Email").fill("new@example.com");
         fillPassword("Password", "long-enough");
         page.getByLabel("Invite code").fill("guess");

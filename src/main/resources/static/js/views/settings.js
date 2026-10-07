@@ -13,6 +13,12 @@ export function openSettings() {
   const prefs = getPrefs();
   const { el, close } = openSheet(`
     <h2>Settings</h2>
+    <form class="stack" id="name-form" novalidate>
+      <label class="field">Name
+        <input name="name" autocomplete="given-name" maxlength="40" value="${esc(store.view().name ?? '')}">
+      </label>
+      <p class="error" id="name-error" hidden></p>
+    </form>
     <div class="setting">
       <span>Rest time</span>
       <div class="stepper compact">
@@ -41,6 +47,23 @@ export function openSettings() {
       <button class="btn danger" data-action="logout">Log out</button>
     </div>
     <button class="btn secondary big" data-close>Done</button>`);
+  const nameForm = el.querySelector('#name-form');
+  const saveName = () => {
+    const name = nameForm.elements.name.value.trim();
+    const error = el.querySelector('#name-error');
+    error.hidden = Boolean(name);
+    if (!name) {
+      error.textContent = 'Enter your name';
+      return;
+    }
+    if (name !== store.view().name) store.dispatch('name.put', { name });
+  };
+  nameForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    saveName();
+    nameForm.elements.name.blur(); // closes the keyboard
+  });
+  nameForm.elements.name.addEventListener('change', saveName);
   el.querySelectorAll('[data-rest]').forEach((button) => button.addEventListener('click', () => {
     const seconds = Math.min(600, Math.max(15, getPrefs().restSeconds + Number(button.dataset.rest)));
     updatePrefs({ restSeconds: seconds });

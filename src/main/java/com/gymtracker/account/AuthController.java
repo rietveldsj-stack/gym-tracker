@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 class AuthController {
 
-    record RegisterRequest(String email, String password, String inviteCode) {
+    record RegisterRequest(String name, String email, String password, String inviteCode) {
     }
 
     record ForgotRequest(String email) {
@@ -56,7 +56,7 @@ class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, String> register(@RequestBody RegisterRequest body, HttpServletRequest request,
                                  HttpServletResponse response) {
-        AppUser user = accounts.register(body.email(), body.password(), body.inviteCode());
+        AppUser user = accounts.register(body.name(), body.email(), body.password(), body.inviteCode());
         UserDetails details = userDetails.loadUserByUsername(user.getEmail());
         Authentication auth = UsernamePasswordAuthenticationToken.authenticated(details, null, details.getAuthorities());
         if (request.getSession(false) != null) {

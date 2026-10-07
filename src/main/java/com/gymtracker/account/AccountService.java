@@ -20,6 +20,7 @@ public class AccountService {
 
     private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     private static final int MAX_EMAIL = 254;
+    private static final int MAX_NAME = 40;
     private static final int MIN_PASSWORD_CHARS = 8;
     private static final int MAX_PASSWORD_BYTES = 72; // BCrypt ignores everything after 72 bytes
 
@@ -36,7 +37,7 @@ public class AccountService {
         this.inviteCode = inviteCode == null ? "" : inviteCode.strip();
     }
 
-    public AppUser register(String rawEmail, String password, String code) {
+    public AppUser register(String rawName, String rawEmail, String password, String code) {
         if (inviteCode.isEmpty()) {
             throw new ForbiddenException("Registration is closed");
         }
@@ -44,6 +45,7 @@ public class AccountService {
         if (!MessageDigest.isEqual(given.getBytes(UTF_8), inviteCode.getBytes(UTF_8))) {
             throw new ForbiddenException("Wrong invite code");
         }
+        String name = normalizeName(rawName);
         String email = Emails.normalize(rawEmail);
         if (email.length() > MAX_EMAIL || !EMAIL.matcher(email).matches()) {
             throw new BadRequestException("Enter a valid email address");
@@ -52,7 +54,24 @@ public class AccountService {
         if (users.findByEmail(email).isPresent()) {
             throw new ConflictException("An account with this email already exists");
         }
-        return users.save(new AppUser(UUID.randomUUID(), email, encoder.encode(password), clock.instant()));
+        return users.save(new AppUser(UUID.randomUUID(), email, name, encoder.encode(password), clock.instant()));
+    }
+
+    public AppUser changeName(UUID userId, String rawName) {
+        AppUser user = users.findById(userId).orElseThrow();
+        user.changeName(normalizeName(rawName));
+        return user;
+    }
+
+    static String normalizeName(String raw) {
+        String name = raw == null ? "" : raw.strip();
+        if (name.isEmpty()) {
+            throw new BadRequestException("Enter your name");
+        }
+        if (name.codePointCount(0, name.length()) > MAX_NAME) {
+            throw new BadRequestException("Use at most 40 characters for your name");
+        }
+        return name;
     }
 
     static void validatePassword(String password) {

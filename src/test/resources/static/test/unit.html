@@ -2,7 +2,8 @@
 <meta charset="utf-8">
 <title>Unit tests</title>
 <script type="module">
-  import { parseWeight, formatSet, formatSetCount, formatDuration, formatClock, formatCountdown } from '/js/format.js';
+  import { parseWeight, formatSet, formatSetCount, formatDuration, formatClock, formatCountdown, greeting } from '/js/format.js';
+  import { monthDays, workoutsByDay, addMonths } from '/js/calendar.js';
   import { prFlags, isPr } from '/js/records.js';
   import * as store from '/js/store.js';
   import { accountEmail, useAccount, forgetAccount } from '/js/account.js';
@@ -148,6 +149,41 @@
     eq([store.pending(), store.view().exercises.length, accountEmail()], [0, 0, 'b@example.com']);
     forgetAccount();
     eq([accountEmail(), store.pending()], [null, 0]);
+  });
+
+  test('greeting follows the time of day', () => {
+    const at = (h, m = 0) => new Date(2026, 9, 7, h, m);
+    eq([at(4, 59), at(5), at(11, 59), at(12), at(17, 59), at(18), at(23, 59)].map((d) => greeting(d, null)),
+      ['Good evening', 'Good morning', 'Good morning', 'Good afternoon', 'Good afternoon', 'Good evening', 'Good evening']);
+  });
+  test('greeting adds the name when there is one', () => {
+    const morning = new Date(2026, 9, 7, 9);
+    eq(greeting(morning, 'Janet'), 'Good morning, Janet');
+    eq(greeting(morning, '  '), 'Good morning');
+    eq(greeting(morning, undefined), 'Good morning');
+  });
+  test('monthDays: weeks start on Monday', () => {
+    const october = monthDays(2026, 9); // 1 October 2026 is a Thursday
+    eq([october.leading, october.days.length, october.days[0], october.days.at(-1)], [3, 31, '2026-10-01', '2026-10-31']);
+    eq(monthDays(2026, 10).leading, 6); // 1 November 2026 is a Sunday
+    eq([monthDays(2027, 1).leading, monthDays(2027, 1).days.length], [0, 28]); // 1 February 2027 is a Monday
+    eq(monthDays(2028, 1).days.length, 29);
+  });
+  test('addMonths crosses years', () => {
+    eq(addMonths({ year: 2026, month: 0 }, -1), { year: 2025, month: 11 });
+    eq(addMonths({ year: 2026, month: 11 }, 1), { year: 2027, month: 0 });
+  });
+  test('workoutsByDay groups workouts by date, earliest first', () => {
+    const byDay = workoutsByDay([
+      { id: 'b', date: '2026-10-05', startedAt: '2026-10-05T17:00:00Z' },
+      { id: 'c', date: '2026-10-01', startedAt: '2026-10-01T08:00:00Z' },
+      { id: 'a', date: '2026-10-05', startedAt: '2026-10-05T07:00:00Z' },
+    ]);
+    eq([...byDay.keys()].sort(), ['2026-10-01', '2026-10-05']);
+    eq(byDay.get('2026-10-05').map((h) => h.id), ['a', 'b']);
+  });
+  test('applyOps: a name change shows straight away', () => {
+    eq(applyOps({ ...empty(), name: null }, [{ kind: 'name.put', payload: { name: 'Janet' } }]).name, 'Janet');
   });
 
   window.__results = results;

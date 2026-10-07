@@ -17,6 +17,9 @@ public class AppUser {
     @Column(nullable = false, length = 254)
     private String email;
 
+    @Column(length = 40)
+    private String name;
+
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
@@ -29,12 +32,17 @@ public class AppUser {
     protected AppUser() {
     }
 
-    public AppUser(UUID id, String email, String passwordHash, Instant createdAt) {
+    public AppUser(UUID id, String email, String name, String passwordHash, Instant createdAt) {
         this.id = id;
         this.email = email;
+        this.name = name;
         this.passwordHash = passwordHash;
         this.createdAt = createdAt;
         this.passwordChangedAt = createdAt;
+    }
+
+    public void changeName(String name) {
+        this.name = name;
     }
 
     public void changePassword(String passwordHash, Instant changedAt) {
@@ -48,6 +56,11 @@ public class AppUser {
 
     public String getEmail() {
         return email;
+    }
+
+    /** Null for accounts made before names existed. */
+    public String getName() {
+        return name;
     }
 
     public String getPasswordHash() {
