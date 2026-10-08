@@ -113,25 +113,28 @@ function renderSession(container, session) {
   timer = setTimeout(tick, 1000 - ((Date.now() - Date.parse(session.startedAt)) % 1000));
   container.querySelector('[data-action="end"]').addEventListener('click', () => endSession(session));
   container.querySelector('[data-action="menu"]').addEventListener('click', () => openMenu(session));
-  container.querySelector('[data-action="add-exercise"]').addEventListener('click', () => openPicker(session));
+  container.querySelector('[data-action="add-exercise"]').addEventListener('click', () => {
+    openPicker((exercise) => openSetSheet(session.id, exercise));
+  });
   container.querySelectorAll('[data-add-set]').forEach((button) => button.addEventListener('click', () => {
-    openSetSheet(session.id, exerciseFor(button.dataset.addSet, session));
+    openSetSheet(session.id, exerciseFor(button.dataset.addSet, session.sets));
   }));
   container.querySelectorAll('[data-set]').forEach((button) => button.addEventListener('click', () => {
     const set = session.sets.find((s) => s.id === button.dataset.set);
-    openSetSheet(session.id, exerciseFor(set.exerciseId, session), set);
+    openSetSheet(session.id, exerciseFor(set.exerciseId, session.sets), set);
   }));
 }
 
 /** The exercise from the list, or a stand-in built from its sets if it has been deleted since. */
-function exerciseFor(exerciseId, session) {
+export function exerciseFor(exerciseId, sets) {
   const exercise = store.view().exercises.find((e) => e.id === exerciseId);
   if (exercise) return exercise;
-  const set = session.sets.find((s) => s.exerciseId === exerciseId);
+  const set = sets.find((s) => s.exerciseId === exerciseId);
   return { id: exerciseId, name: set?.exerciseName ?? '', muscleGroup: set?.muscleGroup ?? null, lastTime: null, records: null };
 }
 
-function openPicker(session) {
+/** Lets her pick an exercise, or make a new one, and hands it to `onPick`. */
+export function openPicker(onPick) {
   let query = '';
   let unsubscribe = () => {};
   const { el, close } = openSheet(`
@@ -161,11 +164,11 @@ function openPicker(session) {
     const button = event.target.closest('[data-pick]');
     if (!button) return;
     close();
-    openSetSheet(session.id, store.view().exercises.find((e) => e.id === button.dataset.pick));
+    onPick(store.view().exercises.find((e) => e.id === button.dataset.pick));
   });
   el.querySelector('[data-action="new"]').addEventListener('click', () => {
     close();
-    openExerciseForm(null, { onSaved: (exercise) => openSetSheet(session.id, exercise) });
+    openExerciseForm(null, { onSaved: onPick });
   });
 }
 
@@ -180,14 +183,22 @@ export function prefillFor(exerciseId, sessionSets, lastTime) {
 const clampWeight = (w) => Math.min(500, Math.max(0, Math.round(w * 4) / 4));
 const clampReps = (r) => Math.min(100, Math.max(1, r));
 
-/** Bottom sheet to log a new set (no `set`) or edit an existing one. */
-function openSetSheet(sessionId, exercise, set = null) {
-  const sessionSets = store.view().activeSession?.sets ?? [];
+/** A set added to a finished workout goes just after its last set, so it stays inside that workout's time. */
+function afterLastSet(sets) {
+  return new Date(Math.max(...sets.map((s) => Date.parse(s.loggedAt))) + 1000).toISOString();
+}
+
+/**
+ * Bottom sheet to log a new set (no `set`) or edit an existing one. When editing a finished workout, `past` holds its
+ * sets, and `onDeleteWorkout` is asked to delete the whole workout when its only set is deleted.
+ */
+export function openSetSheet(sessionId, exercise, set = null, { past = null, onDeleteWorkout = null } = {}) {
+  const sessionSets = past ?? store.view().activeSession?.sets ?? [];
   const start = set ?? prefillFor(exercise.id, sessionSets, exercise.lastTime);
   let type = set?.type ?? 'WORK';
   const { el, close } = openSheet(`
     <h2>${esc(exercise.name)}</h2>
-    ${exercise.lastTime ? `<p class="muted">Last time: ${formatSet(exercise.lastTime.weightKg, exercise.lastTime.reps)}</p>` : ''}
+    ${exercise.lastTime && !past ? `<p class="muted">Top set last time: ${formatSet(exercise.lastTime.weightKg, exercise.lastTime.reps)}</p>` : ''}
     <div class="stepper" data-field="weight">
       <button class="btn step" data-step="-2.5" aria-label="Decrease weight">−</button>
       <label class="step-value"><input inputmode="decimal" aria-label="Weight in kg" value="${Number(start.weightKg)}"><span>kg</span></label>
@@ -232,15 +243,19 @@ function openSetSheet(sessionId, exercise, set = null) {
     }
     saved = true;
     const id = set?.id ?? uuid();
-    store.dispatch('set.put', {
-      id, sessionId, exerciseId: exercise.id, weightKg, reps, type, loggedAt: set?.loggedAt ?? new Date().toISOString(),
-    });
+    const loggedAt = set?.loggedAt ?? (past ? afterLastSet(past) : new Date().toISOString());
+    store.dispatch('set.put', { id, sessionId, exerciseId: exercise.id, weightKg, reps, type, loggedAt });
     close();
+    if (past) return; // no rest timer or PR cheer for fixing an old workout
     if (isPr(sessionFlags(store.view().activeSession?.sets ?? []).get(id))) toast('🏆 New PR!');
     onSetSaved();
   });
   el.querySelector('[data-action="delete"]')?.addEventListener('click', async () => {
     close();
+    if (past?.length === 1) {
+      onDeleteWorkout("This is the workout's only set. Delete the whole workout?");
+      return;
+    }
     if (await confirmDialog('Delete this set?', { ok: 'Delete', danger: true })) store.dispatch('set.delete', { id: set.id });
   });
 }

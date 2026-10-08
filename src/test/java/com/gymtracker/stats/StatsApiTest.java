@@ -23,8 +23,8 @@ class StatsApiTest extends IntegrationTestBase {
         logSet(open, squat, "100", 1, "WORK", "2026-10-05T08:10:00Z");
 
         apiGet("/api/exercises")
-                .andExpect(jsonPath("$[0].lastTime.weightKg").value(50.0))
-                .andExpect(jsonPath("$[0].lastTime.reps").value(8))
+                .andExpect(jsonPath("$[0].lastTime.weightKg").value(60.0)) // the top set, not the last one logged
+                .andExpect(jsonPath("$[0].lastTime.reps").value(5))
                 .andExpect(jsonPath("$[0].lastTime.date").value("2026-09-28"))
                 .andExpect(jsonPath("$[0].records.heaviest.weightKg").value(60.0))
                 .andExpect(jsonPath("$[0].records.heaviest.reps").value(5))

@@ -5,7 +5,7 @@ import { barChart } from '../charts.js';
 import { localDateIso } from '../util.js';
 import { icon } from '../icons.js';
 import { monthDays, addMonths, workoutsByDay } from '../calendar.js';
-import { renderDetail, resetDetailFetch } from './history.js';
+import { renderDetail, resetDetail } from './history.js';
 import {
   MUSCLE_GROUPS, muscleLabel, formatDate, formatLongDate, formatMonth, formatTime, formatDuration, formatSetCount,
 } from '../format.js';
@@ -21,7 +21,7 @@ export function render(container, route) {
     renderDetail(container, route.sessionId, { label: 'Stats', tab: 'stats' });
     return;
   }
-  resetDetailFetch();
+  resetDetail();
   container.innerHTML = `
     <section class="screen">
       <header class="topbar"><h1>Stats</h1></header>

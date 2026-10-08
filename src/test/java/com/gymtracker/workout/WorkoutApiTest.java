@@ -127,14 +127,54 @@ class WorkoutApiTest extends IntegrationTestBase {
     }
 
     @Test
-    void setsOfEndedSessionCannotChange() throws Exception {
+    void setsOfEndedSessionCanBeChangedAddedAndDeleted() throws Exception {
+        UUID session = startSession("2026-10-05T08:00:00Z");
+        UUID setId = logSet(session, squat, "40", 10, "WORK", "2026-10-05T08:10:00Z");
+        UUID other = logSet(session, squat, "45", 8, "WORK", "2026-10-05T08:20:00Z");
+        endSession(session, "2026-10-05T09:00:00Z");
+
+        apiPut("/api/sets/" + setId, setJson(session, squat, "42.5", 9, "WARMUP", "2026-10-05T08:10:00Z"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.weightKg").value(42.5));
+        apiPut("/api/sets/" + UUID.randomUUID(), setJson(session, squat, "50", 5, "WORK", "2026-10-05T08:20:01Z"))
+                .andExpect(status().isOk());
+        apiDelete("/api/sets/" + other).andExpect(status().isNoContent());
+
+        apiGet("/api/sessions/" + session)
+                .andExpect(jsonPath("$.endedAt").value("2026-10-05T09:00:00Z"))
+                .andExpect(jsonPath("$.sets.length()").value(2))
+                .andExpect(jsonPath("$.sets[0].reps").value(9))
+                .andExpect(jsonPath("$.sets[0].type").value("WARMUP"))
+                .andExpect(jsonPath("$.sets[1].weightKg").value(50.0));
+        apiGet("/api/sessions").andExpect(jsonPath("$[0].setCount").value(2));
+    }
+
+    @Test
+    void deletingTheLastSetOfAnEndedWorkoutDeletesTheWorkout() throws Exception {
         UUID session = startSession("2026-10-05T08:00:00Z");
         UUID setId = logSet(session, squat, "40", 10, "WORK", "2026-10-05T08:10:00Z");
         endSession(session, "2026-10-05T09:00:00Z");
-        apiPut("/api/sets/" + UUID.randomUUID(), setJson(session, squat, "40", 10, "WORK", "2026-10-05T08:20:00Z"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("This workout has already ended"));
-        apiDelete("/api/sets/" + setId).andExpect(status().isConflict());
+        apiDelete("/api/sets/" + setId).andExpect(status().isNoContent());
+        apiGet("/api/sessions").andExpect(jsonPath("$.length()").value(0));
+        assertThat(count("workout_session")).isZero();
+    }
+
+    @Test
+    void deletingTheLastSetOfAnOpenWorkoutKeepsIt() throws Exception {
+        UUID session = startSession("2026-10-05T08:00:00Z");
+        UUID setId = logSet(session, squat, "40", 10, "WORK", "2026-10-05T08:10:00Z");
+        apiDelete("/api/sets/" + setId).andExpect(status().isNoContent());
+        apiGet("/api/sessions/active").andExpect(jsonPath("$.id").value(session.toString()));
+    }
+
+    @Test
+    void endedWorkoutCanBeDeleted() throws Exception {
+        UUID session = startSession("2026-10-05T08:00:00Z");
+        logSet(session, squat, "40", 10, "WORK", "2026-10-05T08:10:00Z");
+        endSession(session, "2026-10-05T09:00:00Z");
+        apiDelete("/api/sessions/" + session).andExpect(status().isNoContent());
+        apiGet("/api/sessions").andExpect(jsonPath("$.length()").value(0));
+        assertThat(count("workout_set")).isZero();
     }
 
     @Test

@@ -83,9 +83,12 @@ export function ackedIds() {
 
 /** Fresh server data, fetched after the changes in `ackedOpIds` were accepted, so those are now part of it. */
 export function applyServerSnapshot(patch, ackedOpIds) {
+  const done = acked.filter((op) => ackedOpIds.includes(op.opId));
   acked = acked.filter((op) => !ackedOpIds.includes(op.opId));
   save(ACKED_KEY, acked);
-  setSnapshot(patch);
+  // Finished workouts' sets are a cache the refresh doesn't reload, so accepted edits to them are written into it.
+  const { sessionDetails } = applyOps(structuredClone({ ...snapshot, ...patch }), done);
+  setSnapshot({ ...patch, sessionDetails });
 }
 
 /** Forgets everything stored for the account: the snapshot and the changes not sent yet. */
@@ -121,6 +124,8 @@ export function view() {
 const byTime = (a, b) => Date.parse(a.loggedAt) - Date.parse(b.loggedAt);
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
+const muscleGroupsOf = (sets) => [...new Set([...sets].sort(byTime).map((s) => s.muscleGroup).filter(Boolean))];
+
 export function summarize(session, endedAt) {
   return {
     id: session.id,
@@ -129,8 +134,19 @@ export function summarize(session, endedAt) {
     endedAt,
     durationSeconds: Math.round((Date.parse(endedAt) - Date.parse(session.startedAt)) / 1000),
     setCount: session.sets.length,
-    muscleGroups: [...new Set([...session.sets].sort(byTime).map((s) => s.muscleGroup).filter(Boolean))],
+    muscleGroups: muscleGroupsOf(session.sets),
   };
+}
+
+/** A finished workout's sets changed: its History line follows, and one left without sets is gone, as on the server. */
+function finishedChanged(state, id) {
+  const { sets } = state.sessionDetails[id];
+  if (!sets.length) {
+    delete state.sessionDetails[id];
+    state.history = state.history.filter((h) => h.id !== id);
+    return;
+  }
+  state.history = state.history.map((h) => (h.id === id ? { ...h, setCount: sets.length, muscleGroups: muscleGroupsOf(sets) } : h));
 }
 
 /** Applies pending operations to a copy of the snapshot. Mirrors what the server will do with them. */
@@ -151,8 +167,8 @@ export function applyOps(state, ops) {
         if (!state.activeSession) state.activeSession = { id: p.id, date: p.date, startedAt: p.startedAt, endedAt: null, sets: [] };
         break;
       case 'set.put': {
-        const session = state.activeSession;
-        if (!session || session.id !== p.sessionId) break;
+        const session = state.activeSession?.id === p.sessionId ? state.activeSession : state.sessionDetails?.[p.sessionId];
+        if (!session) break;
         const exercise = state.exercises.find((e) => e.id === p.exerciseId);
         const previous = session.sets.find((s) => s.id === p.id);
         const set = {
@@ -163,10 +179,16 @@ export function applyOps(state, ops) {
         if (previous) Object.assign(previous, set);
         else session.sets.push(set);
         session.sets.sort(byTime);
+        if (session !== state.activeSession) finishedChanged(state, p.sessionId);
         break;
       }
       case 'set.delete':
         if (state.activeSession) state.activeSession.sets = state.activeSession.sets.filter((s) => s.id !== p.id);
+        for (const [id, detail] of Object.entries(state.sessionDetails ?? {})) {
+          if (!detail.sets.some((s) => s.id === p.id)) continue;
+          detail.sets = detail.sets.filter((s) => s.id !== p.id);
+          finishedChanged(state, id);
+        }
         break;
       case 'session.end': {
         const session = state.activeSession;
@@ -178,6 +200,7 @@ export function applyOps(state, ops) {
       case 'session.discard':
         if (state.activeSession?.id === p.id) state.activeSession = null;
         state.history = state.history.filter((h) => h.id !== p.id);
+        if (state.sessionDetails) delete state.sessionDetails[p.id];
         break;
       case 'name.put':
         state.name = p.name;

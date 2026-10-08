@@ -99,6 +99,21 @@ class IsolationApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void cannotEditOrDeleteAnotherAccountsEndedWorkout() throws Exception {
+        endSession(session, "2026-10-05T09:00:00Z");
+        actAsOther();
+        UUID ownExercise = createExercise("Bench press", "CHEST");
+        apiPut("/api/sets/" + set, setJson(session, ownExercise, "1", 1, "WORK", "2026-10-05T08:10:00Z"))
+                .andExpect(status().isNotFound());
+        apiPut("/api/sets/" + UUID.randomUUID(), setJson(session, ownExercise, "1", 1, "WORK", "2026-10-05T08:20:00Z"))
+                .andExpect(status().isNotFound());
+        apiDelete("/api/sets/" + set).andExpect(status().isNoContent());
+        apiDelete("/api/sessions/" + session).andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject("select reps from workout_set where id = ?", Integer.class, set)).isEqualTo(5);
+        assertThat(jdbc.queryForObject("select count(*) from workout_session", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
     void historyAndStatsCountOnlyOwnWorkouts() throws Exception {
         endSession(session, "2026-10-05T09:00:00Z");
         actAsOther();

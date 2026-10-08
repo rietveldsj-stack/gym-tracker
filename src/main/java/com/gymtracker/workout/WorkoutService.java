@@ -112,11 +112,8 @@ public class WorkoutService {
         if (!isQuarterStep(request.weightKg())) {
             throw new BadRequestException("weightKg must be a multiple of 0.25");
         }
-        WorkoutSession session = sessions.findByIdAndUserId(request.sessionId(), userId)
+        sessions.findByIdAndUserId(request.sessionId(), userId)
                 .orElseThrow(() -> new NotFoundException("Workout not found"));
-        if (session.getEndedAt() != null) {
-            throw new ConflictException("This workout has already ended");
-        }
         Exercise exercise = exercises.findByIdAndUserId(request.exerciseId(), userId)
                 .orElseThrow(() -> new NotFoundException("Exercise not found"));
         Optional<WorkoutSet> existing = sets.findById(id);
@@ -138,12 +135,13 @@ public class WorkoutService {
         return SetResponse.of(set, exercise);
     }
 
+    /** Finished workouts can be edited too; one left without sets is deleted, as an empty workout is never kept. */
     public void deleteSet(UUID userId, UUID id) {
         sets.findById(id).ifPresent(set -> sessions.findByIdAndUserId(set.getSessionId(), userId).ifPresent(session -> {
-            if (session.getEndedAt() != null) {
-                throw new ConflictException("This workout has already ended");
-            }
             sets.delete(set);
+            if (session.getEndedAt() != null && sets.countBySessionId(session.getId()) == 0) {
+                sessions.delete(session);
+            }
         }));
     }
 

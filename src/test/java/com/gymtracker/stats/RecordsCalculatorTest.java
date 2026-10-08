@@ -67,14 +67,25 @@ class RecordsCalculatorTest {
     }
 
     @Test
-    void lastTimeIsMostRecentSet() {
+    void lastTimeIsTopSetOfMostRecentWorkoutHeaviestThenMostReps() {
         LastTime last = RecordsCalculator.lastTime(List.of(
+                row(S1, "2026-09-01", "100.00", 1, "08:00"),
                 row(S2, "2026-09-08", "45.00", 8, "08:00"),
-                row(S1, "2026-09-01", "40.00", 10, "08:00"),
-                row(S2, "2026-09-08", "47.50", 6, "08:20")));
-        assertThat(last.weightKg()).isEqualByComparingTo("47.5");
+                row(S2, "2026-09-08", "50.00", 5, "08:10"),
+                row(S2, "2026-09-08", "50.00", 6, "08:20"),
+                row(S2, "2026-09-08", "40.00", 12, "08:30")));
+        assertThat(last.weightKg()).isEqualByComparingTo("50");
         assertThat(last.reps()).isEqualTo(6);
         assertThat(last.date()).isEqualTo(LocalDate.parse("2026-09-08"));
+    }
+
+    @Test
+    void lastTimeOfBodyweightWorkoutIsMostReps() {
+        LastTime last = RecordsCalculator.lastTime(List.of(
+                row(S1, "2026-09-01", "0.00", 12, "08:00"),
+                row(S1, "2026-09-01", "0.00", 15, "08:10"),
+                row(S1, "2026-09-01", "0.00", 10, "08:20")));
+        assertThat(last.reps()).isEqualTo(15);
     }
 
     @Test

@@ -44,9 +44,13 @@ public final class RecordsCalculator {
         return new Records(heaviest, repRecords);
     }
 
+    /** The top set of the most recent workout: the heaviest weight, and the most reps at that weight. */
     public static LastTime lastTime(List<WorkSetRow> rows) {
         return rows.stream()
                 .max(Comparator.comparing(WorkSetRow::loggedAt))
+                .flatMap(latest -> rows.stream()
+                        .filter(row -> row.sessionId().equals(latest.sessionId()))
+                        .max(Comparator.comparing(WorkSetRow::weightKg).thenComparingInt(WorkSetRow::reps)))
                 .map(row -> new LastTime(row.weightKg(), row.reps(), row.date()))
                 .orElse(null);
     }

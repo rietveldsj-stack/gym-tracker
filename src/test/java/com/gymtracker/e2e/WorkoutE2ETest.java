@@ -153,7 +153,7 @@ class WorkoutE2ETest extends E2ETestBase {
         button("Start session").click();
         button("+ Add exercise").click();
         button("Squat").click();
-        assertThat(page.getByText("Last time: 40 kg × 10")).isVisible();
+        assertThat(page.getByText("Top set last time: 40 kg × 10")).isVisible();
         assertThat(page.getByLabel("Weight in kg")).hasValue("40");
     }
 

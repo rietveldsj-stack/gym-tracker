@@ -182,6 +182,43 @@
     eq([...byDay.keys()].sort(), ['2026-10-01', '2026-10-05']);
     eq(byDay.get('2026-10-05').map((h) => h.id), ['a', 'b']);
   });
+  const finished = () => {
+    const state = applyOps(empty(), [squat, { kind: 'exercise.put', payload: { id: 'e2', name: 'Bench', muscleGroup: 'CHEST' } }]);
+    state.history = [{ id: 'f1', date: '2026-10-01', startedAt: '2026-10-01T08:00:00Z', endedAt: '2026-10-01T09:00:00Z',
+      durationSeconds: 3600, setCount: 2, muscleGroups: ['QUADS'] }];
+    state.sessionDetails = { f1: { id: 'f1', date: '2026-10-01', startedAt: '2026-10-01T08:00:00Z', endedAt: '2026-10-01T09:00:00Z', sets: [
+      { id: 'p1', sessionId: 'f1', exerciseId: 'e1', exerciseName: 'Squat', muscleGroup: 'QUADS', weightKg: 60, reps: 5, type: 'WORK', loggedAt: '2026-10-01T08:10:00Z' },
+      { id: 'p2', sessionId: 'f1', exerciseId: 'e1', exerciseName: 'Squat', muscleGroup: 'QUADS', weightKg: 60, reps: 5, type: 'WORK', loggedAt: '2026-10-01T08:20:00Z' },
+    ] } };
+    return state;
+  };
+  const pastSet = (id, exerciseId, weightKg, reps, loggedAt) =>
+    ({ kind: 'set.put', payload: { id, sessionId: 'f1', exerciseId, weightKg, reps, type: 'WORK', loggedAt } });
+  test('applyOps: editing a finished workout changes its sets and its History line', () => {
+    const state = applyOps(finished(), [
+      pastSet('p1', 'e1', 62.5, 5, '2026-10-01T08:10:00Z'),
+      pastSet('p3', 'e2', 40, 8, '2026-10-01T08:20:01Z'),
+      { kind: 'set.delete', payload: { id: 'p2' } }]);
+    eq(state.sessionDetails.f1.sets.map((s) => [s.id, s.exerciseName, s.weightKg]), [['p1', 'Squat', 62.5], ['p3', 'Bench', 40]]);
+    eq([state.history[0].setCount, state.history[0].muscleGroups], [2, ['QUADS', 'CHEST']]);
+    eq(state.activeSession, null);
+  });
+  test('applyOps: deleting the last set of a finished workout deletes the workout', () => {
+    const state = applyOps(finished(), [{ kind: 'set.delete', payload: { id: 'p1' } }, { kind: 'set.delete', payload: { id: 'p2' } }]);
+    eq([state.history.length, state.sessionDetails.f1], [0, undefined]);
+  });
+  test('applyOps: deleting a finished workout removes it and its sets', () => {
+    const state = applyOps(finished(), [{ kind: 'session.discard', payload: { id: 'f1' } }]);
+    eq([state.history.length, state.sessionDetails.f1], [0, undefined]);
+  });
+  test('store: an accepted edit of a finished workout stays in its saved sets after a refresh', () => {
+    const { history, sessionDetails } = finished();
+    store.setSnapshot({ history, sessionDetails });
+    store.dispatch('set.put', pastSet('p1', 'e1', 65, 3, '2026-10-01T08:10:00Z').payload);
+    store.shift();
+    store.applyServerSnapshot({ history: [{ ...history[0] }] }, store.ackedIds());
+    eq(store.view().sessionDetails.f1.sets[0].weightKg, 65);
+  });
   test('applyOps: a name change shows straight away', () => {
     eq(applyOps({ ...empty(), name: null }, [{ kind: 'name.put', payload: { name: 'Janet' } }]).name, 'Janet');
   });
