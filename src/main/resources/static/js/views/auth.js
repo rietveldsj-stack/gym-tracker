@@ -1,5 +1,6 @@
 import { login, request } from '../api.js';
 import { esc } from '../util.js';
+import { appIconUrl } from '../theme.js';
 
 const NO_CONNECTION = 'No connection. Try again when you have signal.';
 
@@ -22,7 +23,7 @@ const emailField = (email = '') => `
 
 const SCREENS = {
   login: ({ notice, email }) => `
-    <img class="app-icon" src="/icons/icon-192.png" alt="" width="72" height="72">
+    <img class="app-icon" src="${appIconUrl()}" alt="" width="72" height="72">
     <h1>Gym Tracker</h1>
     ${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
     <form class="stack" novalidate>

@@ -10,6 +10,8 @@ const ASSETS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
+  '/icons/apple-touch-icon-pink.png',
+  '/icons/apple-touch-icon-redblack.png',
   '/js/app.js',
   '/js/account.js',
   '/js/calendar.js',

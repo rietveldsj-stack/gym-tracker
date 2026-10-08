@@ -63,6 +63,26 @@ class ThemeE2ETest extends E2ETestBase {
         Assertions.assertThat(page.locator("html").getAttribute("data-theme")).isNull();
     }
 
+    private Object touchIcon() {
+        return page.evaluate("() => document.querySelector('link[rel=\"apple-touch-icon\"]').getAttribute('href')");
+    }
+
+    @Test
+    void homeScreenIconFollowsTheTheme() {
+        signIn();
+        Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon.png");
+        pickTheme("Pink");
+        Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon-pink.png");
+        pickTheme("Red & black");
+        Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon-redblack.png");
+        Assertions.assertThat(page.request().get("/icons/apple-touch-icon-redblack.png").status()).isEqualTo(200);
+        page.reload();
+        assertThat(page.locator("#tabs")).isVisible();
+        Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon-redblack.png");
+        pickTheme("Blue");
+        Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon.png");
+    }
+
     @Test
     void savedThemeIsUsedBeforeTheAppStarts() {
         page.navigate("/");
@@ -71,9 +91,12 @@ class ThemeE2ETest extends E2ETestBase {
         // sees only what the inline script in index.html did. (Blocking app.js with page.route wouldn't work: the
         // service worker serves it from its cache, and Playwright doesn't intercept those requests.)
         page.addInitScript("document.addEventListener('readystatechange', () => { "
-                + "if (document.readyState === 'interactive') window.__themeAtParse = document.documentElement.dataset.theme ?? null; });");
+                + "if (document.readyState === 'interactive') { window.__themeAtParse = document.documentElement.dataset.theme ?? null; "
+                + "window.__iconAtParse = document.querySelector('link[rel=\"apple-touch-icon\"]').getAttribute('href'); } });");
         page.reload();
         Assertions.assertThat(page.evaluate("() => window.__themeAtParse")).isEqualTo("redblack");
+        Assertions.assertThat(page.evaluate("() => window.__iconAtParse")).isEqualTo("/icons/apple-touch-icon-redblack.png");
+        assertThat(page.locator("img.app-icon")).hasAttribute("src", "/icons/apple-touch-icon-redblack.png"); // sign-in screen
     }
 
     @Test

@@ -1,11 +1,19 @@
-"""Writes the app icons (a white dumbbell on the accent blue) as PNGs. Run: python3 tools/make_icons.py"""
+"""Writes the app icons, a dumbbell in each theme's colours, as PNGs. Run: python3 tools/make_icons.py
+
+Blue is the default and the manifest's icon. Pink and Red & black only get a home-screen icon: the app offers it while
+that theme is on, so adding the app to the Home Screen then gives the matching icon."""
 import pathlib
 import struct
 import zlib
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "src/main/resources/static/icons"
-BACKGROUND = (42, 120, 214)  # #2a78d6
-FOREGROUND = (255, 255, 255)
+WHITE = (255, 255, 255)
+# theme: (background, dumbbell, file suffix, sizes)
+THEMES = {
+    "blue": ((42, 120, 214), WHITE, "", [("icon-192.png", 192), ("icon-512.png", 512), ("apple-touch-icon.png", 180)]),  # #2a78d6
+    "pink": ((194, 24, 91), WHITE, "-pink", [("apple-touch-icon.png", 180)]),  # #c2185b
+    "redblack": ((214, 31, 44), (11, 11, 12), "-redblack", [("apple-touch-icon.png", 180)]),  # #d61f2c, #0b0b0c
+}
 # (left, top, right, bottom) as fractions of the icon size
 SHAPES = [
     (0.20, 0.47, 0.80, 0.53),  # bar
@@ -23,7 +31,7 @@ def png(size, rows):
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
 
 
-def icon(size):
+def icon(size, background, foreground):
     rows = []
     for y in range(size):
         row = bytearray()
@@ -31,12 +39,14 @@ def icon(size):
         for x in range(size):
             fx = (x + 0.5) / size
             inside = any(left <= fx <= right and top <= fy <= bottom for left, top, right, bottom in SHAPES)
-            row += bytes(FOREGROUND if inside else BACKGROUND)
+            row += bytes(foreground if inside else background)
         rows.append(row)
     return png(size, rows)
 
 
 OUT.mkdir(parents=True, exist_ok=True)
-for name, size in [("icon-192.png", 192), ("icon-512.png", 512), ("apple-touch-icon.png", 180)]:
-    (OUT / name).write_bytes(icon(size))
-    print("wrote", OUT / name)
+for background, foreground, suffix, files in THEMES.values():
+    for name, size in files:
+        path = OUT / name.replace(".png", suffix + ".png")
+        path.write_bytes(icon(size, background, foreground))
+        print("wrote", path)
