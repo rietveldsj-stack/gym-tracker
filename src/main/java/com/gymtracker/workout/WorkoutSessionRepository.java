@@ -1,6 +1,5 @@
 package com.gymtracker.workout;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +12,4 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     Optional<WorkoutSession> findFirstByUserIdAndEndedAtIsNull(UUID userId);
 
     List<WorkoutSession> findByUserIdAndEndedAtIsNotNullOrderByStartedAtDesc(UUID userId);
-
-    List<WorkoutSession> findByUserIdAndEndedAtIsNotNullAndDateBetween(UUID userId, LocalDate from, LocalDate to);
 }

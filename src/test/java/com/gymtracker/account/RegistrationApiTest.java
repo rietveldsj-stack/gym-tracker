@@ -33,6 +33,15 @@ class RegistrationApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void longEmailStaysSignedIn() throws Exception {
+        String email = "a.very.long.name.for.someone.who.likes.long.addresses@example-company.co.uk"; // over 64
+        MvcResult result = register(email, "long-enough", "test-invite").andExpect(status().isCreated()).andReturn();
+        Cookie rememberMe = result.getResponse().getCookie("remember-me");
+        assertThat(rememberMe).as("remember-me cookie").isNotNull();
+        mvc.perform(get("/api/me").cookie(rememberMe)).andExpect(jsonPath("$.email").value(email));
+    }
+
+    @Test
     void registersAndSignsIn() throws Exception {
         MvcResult result = register("new@example.com", "long-enough", "test-invite")
                 .andExpect(status().isCreated())

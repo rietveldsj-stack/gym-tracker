@@ -219,6 +219,15 @@
     store.applyServerSnapshot({ history: [{ ...history[0] }] }, store.ackedIds());
     eq(store.view().sessionDetails.f1.sets[0].weightKg, 65);
   });
+  test('store: only the 30 most recently opened workouts keep their sets on the phone', () => {
+    store.setSnapshot({ sessionDetails: {} });
+    for (let i = 1; i <= 31; i++) store.cacheSessionDetail(`w${i}`, { id: `w${i}`, sets: [] });
+    eq(Object.keys(store.view().sessionDetails).length, 30);
+    eq(store.view().sessionDetails.w1, undefined);
+    store.cacheSessionDetail('w2', { id: 'w2', sets: [] }); // opened again: now the newest
+    store.cacheSessionDetail('w32', { id: 'w32', sets: [] });
+    eq([Boolean(store.view().sessionDetails.w2), store.view().sessionDetails.w3], [true, undefined]);
+  });
   test('applyOps: a name change shows straight away', () => {
     eq(applyOps({ ...empty(), name: null }, [{ kind: 'name.put', payload: { name: 'Janet' } }]).name, 'Janet');
   });

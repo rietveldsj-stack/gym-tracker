@@ -20,6 +20,7 @@ class BrevoMailSenderTest {
     private final AtomicReference<String> apiKey = new AtomicReference<>();
     private final AtomicReference<String> body = new AtomicReference<>();
     private volatile int status = 201;
+    private volatile long delayMs = 0;
 
     @BeforeEach
     void startServer() throws IOException {
@@ -28,6 +29,11 @@ class BrevoMailSenderTest {
             method.set(exchange.getRequestMethod());
             apiKey.set(exchange.getRequestHeaders().getFirst("api-key"));
             body.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            try {
+                Thread.sleep(delayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             byte[] answer = "{}".getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(status, answer.length);
             exchange.getResponseBody().write(answer);
@@ -48,7 +54,7 @@ class BrevoMailSenderTest {
 
     @Test
     void postsTheEmailToBrevo() {
-        sender().send("someone@example.com", "Reset your Gym Tracker password", "Line 1\nhttps://x/#/reset?token=abc");
+        sender().deliver("someone@example.com", "Reset your Gym Tracker password", "Line 1\nhttps://x/#/reset?token=abc").join();
         assertThat(method.get()).isEqualTo("POST");
         assertThat(apiKey.get()).isEqualTo("test-key");
         assertThat(body.get())
@@ -62,8 +68,25 @@ class BrevoMailSenderTest {
     @Test
     void failsWhenBrevoRefuses() {
         status = 401;
-        assertThatThrownBy(() -> sender().send("someone@example.com", "s", "t"))
-                .isInstanceOf(MailException.class)
+        assertThatThrownBy(() -> sender().deliver("someone@example.com", "s", "t").join())
+                .hasCauseInstanceOf(MailException.class)
                 .hasMessageContaining("401");
+    }
+
+    /** A reset request must answer as fast for an account that exists (email sent) as for one that doesn't. */
+    @Test
+    void sendReturnsWithoutWaitingForBrevo() {
+        delayMs = 2000;
+        long start = System.nanoTime();
+        sender().send("someone@example.com", "s", "t");
+        assertThat(java.time.Duration.ofNanos(System.nanoTime() - start)).isLessThan(java.time.Duration.ofMillis(500));
+    }
+
+    @Test
+    void sendDoesNotThrowWhenBrevoRefuses() throws InterruptedException {
+        status = 500;
+        sender().send("someone@example.com", "s", "t"); // logged in the background instead
+        Thread.sleep(200);
+        assertThat(method.get()).isEqualTo("POST");
     }
 }

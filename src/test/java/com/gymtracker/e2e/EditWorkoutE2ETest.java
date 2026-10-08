@@ -160,6 +160,24 @@ class EditWorkoutE2ETest extends E2ETestBase {
     }
 
     @Test
+    void changesMadeElsewhereShowWhenTheWorkoutIsOpenedAgain() {
+        seedSet(workout, squat, "60", 5, "WORK", "2026-10-05T08:10:00Z");
+        signIn();
+        openWorkoutFromHistory();
+        assertThat(page.locator("#session-detail .card")).containsText("60 kg × 5");
+        button("‹ History").click();
+        jdbc.update("update workout_set set reps = 8 where session_id = ?", workout); // e.g. edited on another phone
+        page.locator("[data-session]").first().click();
+        assertThat(page.locator("#session-detail .card")).containsText("60 kg × 8");
+
+        button("‹ History").click();
+        context.setOffline(true);
+        page.locator("[data-session]").first().click();
+        assertThat(page.locator("#session-detail .card")).containsText("60 kg × 8"); // the saved copy, offline
+        assertThat(page.getByText("Not available offline.")).hasCount(0);
+    }
+
+    @Test
     void setSheetShowsTheTopSetOfTheLastWorkout() {
         seedSet(workout, squat, "40", 10, "WARMUP", "2026-10-05T08:05:00Z");
         seedSet(workout, squat, "60", 5, "WORK", "2026-10-05T08:10:00Z");

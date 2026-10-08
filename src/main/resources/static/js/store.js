@@ -108,8 +108,12 @@ export function setSnapshot(patch) {
   changed();
 }
 
+const MAX_SAVED_WORKOUTS = 30;
+
+/** Keeps a finished workout's sets on the phone. Only the most recently opened ones stay, so storage never fills up. */
 export function cacheSessionDetail(id, detail) {
-  setSnapshot({ sessionDetails: { ...snapshot.sessionDetails, [id]: detail } });
+  const others = Object.entries(snapshot.sessionDetails).filter(([key]) => key !== id);
+  setSnapshot({ sessionDetails: Object.fromEntries([...others.slice(-(MAX_SAVED_WORKOUTS - 1)), [id, detail]]) });
 }
 
 export function cacheExerciseStats(id, stats) {

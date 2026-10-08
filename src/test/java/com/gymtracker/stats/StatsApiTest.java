@@ -81,12 +81,9 @@ class StatsApiTest extends IntegrationTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].weekStart").value("2026-09-21"))
-                .andExpect(jsonPath("$[0].workouts").value(0))
                 .andExpect(jsonPath("$[1].weekStart").value("2026-09-28"))
-                .andExpect(jsonPath("$[1].workouts").value(1))
                 .andExpect(jsonPath("$[1].workSetsByMuscle").isEmpty())
                 .andExpect(jsonPath("$[2].weekStart").value("2026-10-05"))
-                .andExpect(jsonPath("$[2].workouts").value(1))
                 .andExpect(jsonPath("$[2].workSetsByMuscle.QUADS").value(2))
                 .andExpect(jsonPath("$[2].workSetsByMuscle.CHEST").value(1));
     }

@@ -11,6 +11,8 @@ import java.time.Instant;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -21,6 +23,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class PasswordChangeSignOutFilter extends OncePerRequestFilter {
 
     static final String SIGNED_IN_AT = PasswordChangeSignOutFilter.class.getName() + ".signedInAt";
+    // Matched the way Spring matches it (decoded), so /%61pi/me counts as /api/me.
+    private static final RequestMatcher API = PathPatternRequestMatcher.withDefaults().matcher("/api/**");
 
     private final AppUserRepository users;
     private final Clock clock;
@@ -37,7 +41,7 @@ public class PasswordChangeSignOutFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/api/");
+        return !API.matches(request);
     }
 
     @Override

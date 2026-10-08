@@ -134,4 +134,17 @@ class PasswordResetApiTest extends IntegrationTestBase {
         mvc.perform(get("/api/me").session((MockHttpSession) again.getRequest().getSession(false)))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void resetAlsoSignsOutRequestsWithAnEncodedPath() throws Exception {
+        MvcResult phone = login(TestUsers.PASSWORD).andReturn();
+        MockHttpSession session = (MockHttpSession) phone.getRequest().getSession(false);
+        java.net.URI encoded = java.net.URI.create("/%61pi/me"); // the server reads %61 as "a", so this is /api/me
+        mvc.perform(get(encoded).session(session)).andExpect(status().isOk());
+
+        forgot(TestUsers.EMAIL);
+        reset(lastToken(), "brand-new-pass").andExpect(status().isOk());
+
+        mvc.perform(get(encoded).session(session)).andExpect(status().isUnauthorized());
+    }
 }

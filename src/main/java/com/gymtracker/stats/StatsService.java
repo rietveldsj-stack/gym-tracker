@@ -7,8 +7,6 @@ import com.gymtracker.exercise.ExerciseRepository;
 import com.gymtracker.exercise.MuscleGroup;
 import com.gymtracker.workout.WeeklySetRow;
 import com.gymtracker.workout.WorkSetRow;
-import com.gymtracker.workout.WorkoutSession;
-import com.gymtracker.workout.WorkoutSessionRepository;
 import com.gymtracker.workout.WorkoutSetRepository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -27,12 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class StatsService {
 
     private final WorkoutSetRepository sets;
-    private final WorkoutSessionRepository sessions;
     private final ExerciseRepository exercises;
 
-    public StatsService(WorkoutSetRepository sets, WorkoutSessionRepository sessions, ExerciseRepository exercises) {
+    public StatsService(WorkoutSetRepository sets, ExerciseRepository exercises) {
         this.sets = sets;
-        this.sessions = sessions;
         this.exercises = exercises;
     }
 
@@ -62,10 +58,6 @@ public class StatsService {
         LocalDate from = thisWeek.minusWeeks(weeks - 1L);
         LocalDate to = thisWeek.plusDays(6);
 
-        Map<LocalDate, Integer> workouts = new HashMap<>();
-        for (WorkoutSession session : sessions.findByUserIdAndEndedAtIsNotNullAndDateBetween(userId, from, to)) {
-            workouts.merge(weekStart(session.getDate()), 1, Integer::sum);
-        }
         Map<LocalDate, Map<MuscleGroup, Integer>> muscles = new HashMap<>();
         for (WeeklySetRow row : sets.findEndedWorkSetMuscles(userId, from, to)) {
             muscles.computeIfAbsent(weekStart(row.date()), week -> new EnumMap<>(MuscleGroup.class))
@@ -75,8 +67,7 @@ public class StatsService {
         List<WeekStats> result = new ArrayList<>();
         for (int i = 0; i < weeks; i++) {
             LocalDate week = from.plusWeeks(i);
-            result.add(new WeekStats(week, workouts.getOrDefault(week, 0),
-                    muscles.getOrDefault(week, new EnumMap<>(MuscleGroup.class))));
+            result.add(new WeekStats(week, muscles.getOrDefault(week, new EnumMap<>(MuscleGroup.class))));
         }
         return result;
     }

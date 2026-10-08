@@ -121,6 +121,6 @@ class IsolationApiTest extends IntegrationTestBase {
         apiGet("/api/exercises/" + squat + "/stats").andExpect(status().isNotFound());
         apiGet("/api/stats/weekly?weeks=1&today=2026-10-05")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].workouts").value(0));
+                .andExpect(jsonPath("$[0].workSetsByMuscle").isEmpty());
     }
 }

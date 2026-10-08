@@ -93,7 +93,7 @@ export function renderDetail(container, id, back = { label: 'History', tab: 'his
     renderDetail(container, id, back);
   });
   if (editable) bindEditing(container, id, detail, back);
-  if (detail || fetchedFor === id) return;
+  if (fetchedFor === id) return; // loads once per opening; until then (and offline) the copy on the phone shows
   fetchedFor = id;
   delete failures[id];
   request('GET', `/api/sessions/${id}`).then((result) => {
@@ -101,6 +101,7 @@ export function renderDetail(container, id, back = { label: 'History', tab: 'his
       store.cacheSessionDetail(id, result.data);
       return;
     }
+    if (store.view().sessionDetails[id]) return;
     failures[id] = result.kind === 'network' ? 'Not available offline.' : 'Could not load this workout.';
     const el = document.getElementById('session-detail');
     if (el && getRoute().sessionId === id) el.innerHTML = `<p class="empty">${failures[id]}</p>`;
