@@ -198,6 +198,42 @@ class WorkoutE2ETest extends E2ETestBase {
     }
 
     @Test
+    void pickerHangsFromTheTopAndFiltersByMuscleGroup() {
+        seedExercise("Bench press", "CHEST");
+        startSessionWithSquat();
+        button("+ Add exercise").click();
+        Assertions.assertThat(page.locator(".sheet").boundingBox().y).isLessThan(60);
+
+        button("Chest").click();
+        assertThat(button("Chest")).hasAttribute("aria-pressed", "true");
+        assertThat(button("Bench press")).isVisible();
+        assertThat(button("Squat")).isHidden();
+
+        page.getByLabel("Search exercises").fill("squat");
+        assertThat(page.locator(".picker-list")).containsText("No matching exercises.");
+
+        button("Chest").click(); // tapping the chosen group again shows every group
+        assertThat(button("Squat")).isVisible();
+    }
+
+    @Test
+    void adductorsIsAMuscleGroup() {
+        startSessionWithSquat();
+        button("+ Add exercise").click();
+        button("+ New exercise").click();
+        page.getByLabel("Name").fill("Adductor machine");
+        button("Adductors").click();
+        button("Save").click();
+        fillAndSaveSet("50", "12", false);
+        assertThat(setRows().nth(0)).containsText("50 kg × 12");
+
+        button("+ Add exercise").click();
+        button("Adductors").click();
+        assertThat(button("Adductor machine")).isVisible();
+        assertThat(button("Squat")).isHidden();
+    }
+
+    @Test
     void pickerShowsExercisesThatArriveWhileItIsOpen() {
         seedExercise("Squat", "QUADS");
         page.navigate("/");

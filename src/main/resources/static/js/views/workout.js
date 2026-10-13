@@ -136,17 +136,23 @@ export function exerciseFor(exerciseId, sets) {
 /** Lets her pick an exercise, or make a new one, and hands it to `onPick`. */
 export function openPicker(onPick) {
   let query = '';
+  let filter = null; // muscle group chosen with a chip, or null for all
   let unsubscribe = () => {};
   const { el, close } = openSheet(`
     <h2>Add exercise</h2>
     <input class="search" type="search" placeholder="Search" aria-label="Search exercises">
+    <div class="chips small picker-groups" role="group" aria-label="Muscle group"></div>
     <button class="btn secondary" data-action="new">+ New exercise</button>
-    <div class="picker-list"></div>`, { onClose: () => unsubscribe() });
+    <div class="picker-list"></div>`, { onClose: () => unsubscribe(), top: true });
+  const groups = el.querySelector('.picker-groups');
   const list = el.querySelector('.picker-list');
   const draw = () => {
     const q = query.trim().toLowerCase();
     const all = store.view().exercises;
-    const matches = all.filter((e) => e.name.toLowerCase().includes(q));
+    const used = MUSCLE_GROUPS.filter((g) => all.some((e) => e.muscleGroup === g));
+    groups.innerHTML = used.map((g) => `
+      <button type="button" class="chip${g === filter ? ' selected' : ''}" data-group="${g}" aria-pressed="${g === filter}">${muscleLabel(g)}</button>`).join('');
+    const matches = all.filter((e) => e.name.toLowerCase().includes(q) && (!filter || e.muscleGroup === filter));
     list.innerHTML = MUSCLE_GROUPS.map((group) => {
       const items = matches.filter((e) => e.muscleGroup === group);
       return items.length ? `
@@ -158,6 +164,12 @@ export function openPicker(onPick) {
   unsubscribe = store.subscribe(draw); // exercises can arrive while the picker is open (first sync, slow signal)
   el.querySelector('.search').addEventListener('input', (event) => {
     query = event.target.value;
+    draw();
+  });
+  groups.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-group]');
+    if (!chip) return;
+    filter = chip.dataset.group === filter ? null : chip.dataset.group; // tapping the chosen chip again shows all
     draw();
   });
   list.addEventListener('click', (event) => {

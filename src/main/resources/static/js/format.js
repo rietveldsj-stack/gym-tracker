@@ -1,4 +1,4 @@
-export const MUSCLE_GROUPS = ['CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'QUADS', 'HAMSTRINGS', 'CALVES', 'GLUTES', 'CORE'];
+export const MUSCLE_GROUPS = ['CHEST', 'BACK', 'SHOULDERS', 'BICEPS', 'TRICEPS', 'QUADS', 'HAMSTRINGS', 'CALVES', 'GLUTES', 'ADDUCTORS', 'CORE'];
 
 export function muscleLabel(group) {
   return group ? group.charAt(0) + group.slice(1).toLowerCase() : '';

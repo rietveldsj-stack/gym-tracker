@@ -100,6 +100,9 @@ tabsEl.addEventListener('click', (event) => {
 
 // Safari on iPhone only shows :active (pressed) styles when the page listens for touches.
 document.addEventListener('touchstart', () => {}, { passive: true });
+// The app never zooms. Safari on iPhone ignores user-scalable=no in the viewport tag, so pinches are cancelled here;
+// touch-action in styles.css stops double-tap zoom.
+document.addEventListener('gesturestart', (event) => event.preventDefault());
 
 async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

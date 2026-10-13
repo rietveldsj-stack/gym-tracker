@@ -29,18 +29,34 @@ export function toast(message, ms = 2500) {
   toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-/** Opens a bottom sheet. Tapping the backdrop or any [data-close] element closes it. */
-export function openSheet(html, { onClose } = {}) {
+/**
+ * Opens a bottom sheet. Tapping the backdrop or any [data-close] element closes it. A `top` sheet hangs from the top
+ * of the screen at a fixed height that ends where the keyboard begins, so typing in it never hides its contents and
+ * it doesn't jump when its contents shrink.
+ */
+export function openSheet(html, { onClose, top = false } = {}) {
   const backdrop = document.createElement('div');
-  backdrop.className = 'backdrop';
+  backdrop.className = top ? 'backdrop top' : 'backdrop';
   backdrop.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
   document.getElementById('overlay-root').appendChild(backdrop);
   const el = backdrop.firstElementChild;
+  const viewport = top ? window.visualViewport : null;
+  const fit = () => {
+    backdrop.style.top = `${viewport.offsetTop}px`;
+    backdrop.style.height = `${viewport.height}px`;
+  };
+  if (viewport) {
+    fit();
+    viewport.addEventListener('resize', fit);
+    viewport.addEventListener('scroll', fit);
+  }
   let closed = false;
   const close = () => {
     if (closed) return;
     closed = true;
     ghost = { until: lastClick.stamp + GHOST_MS, x: lastClick.x, y: lastClick.y };
+    viewport?.removeEventListener('resize', fit);
+    viewport?.removeEventListener('scroll', fit);
     backdrop.remove();
     onClose?.();
   };

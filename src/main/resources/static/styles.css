@@ -72,6 +72,7 @@
 
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
+html { touch-action: pan-x pan-y; } /* scrolling only: no pinch or double-tap zoom */
 
 body {
   margin: 0;
@@ -266,6 +267,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .sheet h2 { font-size: 20px; margin: 0; }
 @keyframes sheet-up { from { transform: translateY(30px); opacity: 0.6; } }
+/* Hangs from the top; ui.js sizes the backdrop to the part of the screen above the keyboard */
+#overlay-root .backdrop.top { align-items: stretch; padding-top: calc(12px + env(safe-area-inset-top)); }
+.backdrop.top .sheet { max-height: none; overflow: hidden; border-radius: 20px 20px 0 0; animation-name: sheet-down; }
+@keyframes sheet-down { from { transform: translateY(-30px); opacity: 0.6; } }
 .confirm-text { font-size: 17px; }
 .actions .btn { flex: 1; }
 
@@ -288,6 +293,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: 20px;
   background: var(--surface-1);
 }
+.chips.small { gap: 6px; }
+.chips.small .chip { min-height: 32px; padding: 0 12px; font-size: 14px; flex-shrink: 0; }
+/* Exercise picker: the muscle-group chips sit on one row that scrolls sideways; only the list scrolls up and down */
+.picker-groups { flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; }
+.picker-groups::-webkit-scrollbar { display: none; }
+.picker-groups:empty { display: none; }
+.backdrop.top .picker-list { flex: 1; min-height: 0; overflow-y: auto; }
 .chip.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 
 .stepper { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; align-items: center; }
