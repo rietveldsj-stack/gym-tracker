@@ -214,6 +214,10 @@ class WorkoutE2ETest extends E2ETestBase {
 
         button("Chest").click(); // tapping the chosen group again shows every group
         assertThat(button("Squat")).isVisible();
+
+        button("Close").click();
+        assertThat(page.locator(".sheet")).hasCount(0);
+        assertThat(button("+ Add exercise")).isVisible();
     }
 
     @Test

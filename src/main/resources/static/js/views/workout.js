@@ -139,7 +139,10 @@ export function openPicker(onPick) {
   let filter = null; // muscle group chosen with a chip, or null for all
   let unsubscribe = () => {};
   const { el, close } = openSheet(`
-    <h2>Add exercise</h2>
+    <div class="sheet-head">
+      <h2>Add exercise</h2>
+      <button class="btn icon ghost" data-close aria-label="Close">${icon('x')}</button>
+    </div>
     <input class="search" type="search" placeholder="Search" aria-label="Search exercises">
     <div class="chips small picker-groups" role="group" aria-label="Muscle group"></div>
     <button class="btn secondary" data-action="new">+ New exercise</button>

@@ -266,6 +266,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   animation: sheet-up 0.18s ease-out;
 }
 .sheet h2 { font-size: 20px; margin: 0; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -8px -8px 0 0; }
 @keyframes sheet-up { from { transform: translateY(30px); opacity: 0.6; } }
 /* Hangs from the top; ui.js sizes the backdrop to the part of the screen above the keyboard */
 #overlay-root .backdrop.top { align-items: stretch; padding-top: calc(12px + env(safe-area-inset-top)); }
