@@ -319,7 +319,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .backdrop.top .picker-list { flex: 1; min-height: 0; overflow-y: auto; }
 .chip.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 
-.stepper { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; align-items: center; }
+.stepper {
+  display: grid;
+  grid-template-columns: clamp(52px, 16vw, 64px) 1fr clamp(52px, 16vw, 64px); /* slimmer buttons give the number room on small phones */
+  gap: 8px;
+  align-items: center;
+}
 .step { min-height: 64px; font-size: 28px; }
 .step-value { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
 .step-value input {
