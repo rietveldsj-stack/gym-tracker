@@ -1,7 +1,7 @@
 # Gym Tracker
 
 A gym tracker for a few people: accounts with an invite code, exercises, workout sessions with warmup/work sets,
-history, personal records, progress charts, a rest timer with lock-screen alerts, and three colour themes.
+history, personal records, progress charts, a rest timer with lock-screen alerts, and four colour themes.
 Spring Boot serves the API and an offline-capable web app that is added to the iPhone home screen from Safari.
 
 ## Run locally

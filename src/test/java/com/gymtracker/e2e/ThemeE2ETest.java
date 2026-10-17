@@ -58,6 +58,9 @@ class ThemeE2ETest extends E2ETestBase {
 
         pickTheme("Red & black");
         Assertions.assertThat(accent()).isEqualTo("#d61f2c");
+        pickTheme("Green & black");
+        assertThat(page.locator("html")).hasAttribute("data-theme", "greenblack");
+        Assertions.assertThat(accent()).isEqualTo("#15803d");
         pickTheme("Blue");
         assertThat(page.locator("html")).not().hasAttribute("data-theme", "redblack");
         Assertions.assertThat(page.locator("html").getAttribute("data-theme")).isNull();
@@ -79,6 +82,9 @@ class ThemeE2ETest extends E2ETestBase {
         page.reload();
         assertThat(page.locator("#tabs")).isVisible();
         Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon-redblack.png");
+        pickTheme("Green & black");
+        Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon-greenblack.png");
+        Assertions.assertThat(page.request().get("/icons/apple-touch-icon-greenblack.png").status()).isEqualTo(200);
         pickTheme("Blue");
         Assertions.assertThat(touchIcon()).isEqualTo("/icons/apple-touch-icon.png");
     }
@@ -97,12 +103,32 @@ class ThemeE2ETest extends E2ETestBase {
         Assertions.assertThat(page.evaluate("() => window.__themeAtParse")).isEqualTo("redblack");
         Assertions.assertThat(page.evaluate("() => window.__iconAtParse")).isEqualTo("/icons/apple-touch-icon-redblack.png");
         assertThat(page.locator("img.app-icon")).hasAttribute("src", "/icons/apple-touch-icon-redblack.png"); // sign-in screen
+
+        page.evaluate("() => localStorage.setItem('gt.prefs.v1', JSON.stringify({ theme: 'greenblack' }))");
+        page.reload();
+        Assertions.assertThat(page.evaluate("() => window.__themeAtParse")).isEqualTo("greenblack");
+        Assertions.assertThat(page.evaluate("() => window.__iconAtParse")).isEqualTo("/icons/apple-touch-icon-greenblack.png");
+    }
+
+    @Test
+    void fourThemesFitInSettingsOnASmallPhone() {
+        page.setViewportSize(320, 568);
+        signIn();
+        tab("Workout").click();
+        page.getByLabel("Settings").click();
+        Object clipped = page.evaluate("""
+                () => [...document.querySelectorAll('[data-theme-choice]')].filter((b) => {
+                  const text = document.createRange();
+                  text.selectNodeContents(b);
+                  return b.scrollWidth > b.clientWidth || text.getClientRects().length > 1; // cut off or wrapped
+                }).map((b) => b.textContent)""");
+        Assertions.assertThat((List<?>) clipped).isEmpty();
     }
 
     @Test
     void newThemesAreReadable() {
         page.navigate("/");
-        for (String theme : List.of("pink", "redblack")) {
+        for (String theme : List.of("pink", "redblack", "greenblack")) {
             @SuppressWarnings("unchecked")
             List<String> low = (List<String>) page.evaluate(LOW_CONTRAST, theme);
             Assertions.assertThat(low).as(theme).isEmpty();

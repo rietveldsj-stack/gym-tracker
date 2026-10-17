@@ -36,8 +36,8 @@
 }
 
 /* Themes picked in Settings. Blue (above) is the default and follows the phone's light/dark mode; these are
-   fixed: Pink is always light, Red & black always dark. Primary buttons are filled and danger buttons are
-   text-only, so they stay apart in Red & black where both are red. */
+   fixed: Pink is always light, Red & black and Green & black always dark. Primary buttons are filled and danger
+   buttons are text-only, so they stay apart in Red & black where both are red. */
 :root[data-theme="pink"] {
   color-scheme: light;
   --surface-0: #fbeef3;
@@ -67,6 +67,22 @@
   --accent: #d61f2c;
   --accent-text: #ffffff;
   --series-1: #ef4655;
+  --danger: #ff8a80;
+}
+
+:root[data-theme="greenblack"] {
+  color-scheme: dark;
+  --surface-0: #0a0c0b;
+  --surface-1: #121614;
+  --surface-2: #1b2620;
+  --text-primary: #ffffff;
+  --text-secondary: #c3d1c8;
+  --text-muted: #8fa196;
+  --border: #25342b;
+  --grid: #1f2c24;
+  --accent: #15803d;
+  --accent-text: #ffffff;
+  --series-1: #34c759;
   --danger: #ff8a80;
 }
 
@@ -316,6 +332,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: min(40px, 10vw); /* "499.75" still fits between the buttons on a 320px-wide phone */
   font-weight: 700;
   text-align: right;
+  padding: 0 4px 0 0; /* iPhone keeps the caret's room at the right edge, which would clip the last digit */
   font-variant-numeric: tabular-nums;
 }
 .step-value span { color: var(--text-secondary); flex: 1; }
@@ -326,13 +343,12 @@ output { text-align: center; font-weight: 700; font-variant-numeric: tabular-num
 .segmented { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: 12px; padding: 3px; }
 .segmented button { min-height: 40px; border: 0; border-radius: 10px; background: transparent; font-weight: 600; color: var(--text-secondary); }
 .segmented button[aria-checked="true"] { background: var(--surface-1); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
-.segmented.three { grid-template-columns: repeat(3, 1fr); }
+.segmented.two-rows { grid-template-columns: 1fr 1fr; gap: 3px; }
 
 #toast {
   position: fixed;
   left: 50%;
   bottom: calc(150px + env(safe-area-inset-bottom));
-  padding: 0 4px 0 0; /* iPhone keeps the caret's room at the right edge, which would clip the last digit */
   z-index: 30;
   max-width: 90vw;
   transform: translate(-50%, 20px);

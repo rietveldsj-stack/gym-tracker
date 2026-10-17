@@ -17,6 +17,7 @@ class AppIconsTest {
         "apple-touch-icon.png, 2a78d6, ffffff",
         "apple-touch-icon-pink.png, c2185b, ffffff",
         "apple-touch-icon-redblack.png, d61f2c, 0b0b0c",
+        "apple-touch-icon-greenblack.png, 15803d, 0a0c0b",
     })
     void iconHasTheThemeColours(String file, String background, String dumbbell) throws IOException {
         BufferedImage icon = ImageIO.read(Path.of("src/main/resources/static/icons", file).toFile());

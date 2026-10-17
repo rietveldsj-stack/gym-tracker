@@ -1,6 +1,6 @@
 """Writes the app icons, a dumbbell in each theme's colours, as PNGs. Run: python3 tools/make_icons.py
 
-Blue is the default and the manifest's icon. Pink and Red & black only get a home-screen icon: the app offers it while
+Blue is the default and the manifest's icon. Pink, Red & black and Green & black only get a home-screen icon: the app offers it while
 that theme is on, so adding the app to the Home Screen then gives the matching icon."""
 import pathlib
 import struct
@@ -13,6 +13,7 @@ THEMES = {
     "blue": ((42, 120, 214), WHITE, "", [("icon-192.png", 192), ("icon-512.png", 512), ("apple-touch-icon.png", 180)]),  # #2a78d6
     "pink": ((194, 24, 91), WHITE, "-pink", [("apple-touch-icon.png", 180)]),  # #c2185b
     "redblack": ((214, 31, 44), (11, 11, 12), "-redblack", [("apple-touch-icon.png", 180)]),  # #d61f2c, #0b0b0c
+    "greenblack": ((21, 128, 61), (10, 12, 11), "-greenblack", [("apple-touch-icon.png", 180)]),  # #15803d, #0a0c0b
 }
 # (left, top, right, bottom) as fractions of the icon size
 SHAPES = [

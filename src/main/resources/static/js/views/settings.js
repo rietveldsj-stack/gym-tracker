@@ -33,7 +33,7 @@ export function openSettings() {
     </label>
     <div class="stack">
       <span>Theme</span>
-      <div class="segmented three" role="radiogroup" aria-label="Theme">
+      <div class="segmented two-rows" role="radiogroup" aria-label="Theme">
         ${THEMES.map((t) => `<button type="button" role="radio" data-theme-choice="${t.id}" aria-checked="${prefs.theme === t.id}">${esc(t.label)}</button>`).join('')}
       </div>
     </div>

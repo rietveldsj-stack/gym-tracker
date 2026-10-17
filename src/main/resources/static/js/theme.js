@@ -4,10 +4,11 @@ export const THEMES = [
   { id: 'blue', label: 'Blue' },
   { id: 'pink', label: 'Pink' },
   { id: 'redblack', label: 'Red & black' },
+  { id: 'greenblack', label: 'Green & black' },
 ];
 
 // Status-bar colour per theme. Blue keeps index.html's light/dark pair.
-const BAR = { pink: '#fff8fa', redblack: '#161314' };
+const BAR = { pink: '#fff8fa', redblack: '#161314', greenblack: '#121614' };
 const BLUE_BARS = ['#fcfcfb', '#1a1a19'];
 
 const themeId = (theme) => (THEMES.some((t) => t.id === theme) ? theme : 'blue');

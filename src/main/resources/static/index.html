@@ -18,7 +18,7 @@
     // that theme's home-screen icon (theme.js keeps both up to date when the theme changes).
     try {
       var theme = JSON.parse(localStorage.getItem('gt.prefs.v1') || '{}').theme;
-      if (theme === 'pink' || theme === 'redblack') {
+      if (theme === 'pink' || theme === 'redblack' || theme === 'greenblack') {
         document.documentElement.dataset.theme = theme;
         document.querySelector('link[rel="apple-touch-icon"]').href = '/icons/apple-touch-icon-' + theme + '.png';
       }
