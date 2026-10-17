@@ -255,4 +255,25 @@ class WorkoutE2ETest extends E2ETestBase {
         button("+ Add exercise").click();
         assertThat(button("Squat")).isVisible();
     }
+
+    @Test
+    void widestWeightFitsInTheSetSheetOnASmallPhone() {
+        page.setViewportSize(320, 568); // iPhone SE, or any iPhone with Display Zoom
+        startSessionWithSquat();
+        button("+ Add exercise").click();
+        button("Squat").click();
+        Locator weight = page.getByLabel("Weight in kg");
+        for (String value : new String[] {"140.5", "499.75"}) {
+            weight.fill(value);
+            // The text's own width, with a few px to spare: iPhone keeps room for the caret at a right-aligned edge.
+            Object room = weight.evaluate("""
+                    el => {
+                      const cs = getComputedStyle(el);
+                      const ctx = document.createElement('canvas').getContext('2d');
+                      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+                      return el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - ctx.measureText(el.value).width;
+                    }""");
+            Assertions.assertThat(((Number) room).doubleValue()).as(value + " has room").isGreaterThanOrEqualTo(4);
+        }
+    }
 }

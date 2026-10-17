@@ -313,7 +313,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 0;
   background: transparent;
   color: var(--text-primary);
-  font-size: 40px;
+  font-size: min(40px, 10vw); /* "499.75" still fits between the buttons on a 320px-wide phone */
   font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -332,6 +332,7 @@ output { text-align: center; font-weight: 700; font-variant-numeric: tabular-num
   position: fixed;
   left: 50%;
   bottom: calc(150px + env(safe-area-inset-bottom));
+  padding: 0 4px 0 0; /* iPhone keeps the caret's room at the right edge, which would clip the last digit */
   z-index: 30;
   max-width: 90vw;
   transform: translate(-50%, 20px);
