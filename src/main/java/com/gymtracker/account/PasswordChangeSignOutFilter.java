@@ -11,20 +11,17 @@ import java.time.Instant;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Ends server sessions that signed in before the account's last password change, so a password reset signs out
  * every device. Each session records when it signed in; sessions from a remember-me login are marked on their
- * first request, which is the moment that login happened.
+ * first request, which is the moment that login happened. Runs on every path, not only /api: a remember-me login on
+ * any other path (the browser's /favicon.ico, say) would leave an unmarked session that a later reset couldn't end.
  */
 public class PasswordChangeSignOutFilter extends OncePerRequestFilter {
 
     static final String SIGNED_IN_AT = PasswordChangeSignOutFilter.class.getName() + ".signedInAt";
-    // Matched the way Spring matches it (decoded), so /%61pi/me counts as /api/me.
-    private static final RequestMatcher API = PathPatternRequestMatcher.withDefaults().matcher("/api/**");
 
     private final AppUserRepository users;
     private final Clock clock;
@@ -37,11 +34,6 @@ public class PasswordChangeSignOutFilter extends OncePerRequestFilter {
     /** Call right after a sign-in that created or changed the session. */
     public static void markSignedIn(HttpServletRequest request, Instant at) {
         request.getSession().setAttribute(SIGNED_IN_AT, at);
-    }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !API.matches(request);
     }
 
     @Override

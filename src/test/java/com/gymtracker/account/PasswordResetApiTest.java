@@ -136,6 +136,20 @@ class PasswordResetApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void resetSignsOutASessionThatARememberMeCookieOpenedOutsideTheApi() throws Exception {
+        Cookie rememberMe = login(TestUsers.PASSWORD).andReturn().getResponse().getCookie("remember-me");
+        // e.g. the browser fetching /favicon.ico: the remember-me login lands in a new session
+        MvcResult favicon = mvc.perform(get("/favicon.ico").cookie(rememberMe)).andReturn();
+        MockHttpSession session = (MockHttpSession) favicon.getRequest().getSession(false);
+        assertThat(session).as("session opened by the remember-me login").isNotNull();
+
+        forgot(TestUsers.EMAIL);
+        reset(lastToken(), "brand-new-pass").andExpect(status().isOk());
+
+        mvc.perform(get("/api/me").session(session)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void resetAlsoSignsOutRequestsWithAnEncodedPath() throws Exception {
         MvcResult phone = login(TestUsers.PASSWORD).andReturn();
         MockHttpSession session = (MockHttpSession) phone.getRequest().getSession(false);
