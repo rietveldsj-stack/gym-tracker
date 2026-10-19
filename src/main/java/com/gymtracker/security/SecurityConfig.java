@@ -104,7 +104,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/export/**").permitAll() // checks its own key: see ExportController
+                        .requestMatchers("/api/export/sessions").permitAll() // checks its own key: see ExportController
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
